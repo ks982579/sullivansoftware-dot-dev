@@ -7,6 +7,82 @@
   --foreground: #171717;
 }
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+}
+
+.night-sky {
+  border: red 5px dashed;
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  /* background: url(./bgo.jpg); */
+  /* background-position-x: center; */
+  /* background-size: cover; */
+  background: #00a;
+  animation: animateBg 10s linear infinite;
+  .shooting-star {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: #999;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.1), 0 0 0 8px rgba(255,255,255,0.1), 0 0 0 20px rgba(255,255,255,0.1);
+    animation: shootingstar 3s linear infinite;
+  }
+  /* :: is pseudo-element */
+  .shooting-star::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 300px;
+    height: 3px;
+    background: linear-gradient(90deg, #fff, transparent);
+  }
+  /* : is pseudo-class */
+  .shooting-star:nth-child(1) {
+    top: 0;
+    right: 0;
+    left: initial;
+    animation-delay: 0;
+    animation-duration: 4s;
+  }
+}
+
+@keyframes animateBg {
+  0%,100% {
+    transform:scale(.8);
+  }
+  50% {
+    transform:scale(1);
+  }
+}
+
+@keyframes shootingstar {
+  0% {
+    transform: rotate(315deg) translateX(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(315deg) translateX(-1500px);
+    opacity: 0;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
