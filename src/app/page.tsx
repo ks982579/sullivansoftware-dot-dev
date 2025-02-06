@@ -1,91 +1,10 @@
-import Image from "next/image";
-
-export default function Home() {
-  return (
-    <div>
-      <div className="night-sky">
-        <span className="shooting-star"></span>
-      </div>
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-        <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-          <div className="night-sky"></div>
-          <Image
-            className="dark:invert"
-            src="/next.svg"
-            alt="Next.js logo"
-            width={180}
-            height={38}
-            priority
-          />
-          <div>Tech With Kevin</div>
-          <p>
-            As a Software Engineer, I thrive on solving complex technical challenges across the full technology stack.
-            By day, I architect and implement browser-based security solutions at Forcepoint, working with everything from C++ systems components to JavaScript browser extensions.
-            My journey has evolved from building internal productivity tools with Python and JavaScript, to full-stack development with Python Django and React, through test automation, and to my current focus on systems programming and security.
-            By night - or rather, in the early morning hours - I continue to expand my expertise across the software spectrum, exploring technologies like Rust while pursuing my MSc. in Computer Science at the International University of Applied Sciences, a journey that began in January 2023.
-            This blend of practical experience and academic pursuit fuels building efficient, maintainable and secure software systems that make a meaningful impact.
-          </p>
-
-        </main>
-        <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-          <a
-            className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              aria-hidden
-              src="/file.svg"
-              alt="File icon"
-              width={16}
-              height={16}
-            />
-            Learn
-          </a>
-          <a
-            className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              aria-hidden
-              src="/window.svg"
-              alt="Window icon"
-              width={16}
-              height={16}
-            />
-            Examples
-          </a>
-          <a
-            className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-            href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              aria-hidden
-              src="/globe.svg"
-              alt="Globe icon"
-              width={16}
-              height={16}
-            />
-            Go to nextjs.org →
-          </a>
-        </footer>
-      </div>
-    </div>
-  );
-}
-
 // app/page.tsx
 'use client';
-
-import { useEffect, useState } from 'react';
+import Image from "next/image";
+import { useEffect, useState, ReactNode } from 'react';
 import Link from 'next/link';
 
-const LandingPage = () => {
+const LandingPage = (): React.ReactNode => {
   const [scrollPosition, setScrollPosition] = useState(0);
 
   useEffect(() => {
@@ -98,33 +17,40 @@ const LandingPage = () => {
   }, []);
 
   return (
+    // <div className="night-sky">
+    //   <span className="shooting-star"></span>
+    // </div>
     <main className="h-screen snap-y snap-mandatory overflow-y-scroll">
       {/* Hero Section with Animation */}
       <section className="relative h-screen snap-start bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
         <div className="absolute inset-0 overflow-hidden">
           <div className="animate-pulse absolute inset-0 opacity-20">
             {/* Animated background elements */}
-            {[...Array(20)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full bg-white"
-                style={{
-                  width: `${Math.random() * 20}px`,
-                  height: `${Math.random() * 20}px`,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animation: `float ${Math.random() * 10 + 5}s linear infinite`,
-                }}
-              />
-            ))}
+            {[...Array(100)].map((_, i) => {
+              let len: number = Math.max(Math.random() * 20, 5);
+              return (
+                <div
+                  key={i}
+                  className="absolute rounded-full bg-white"
+                  style={{
+                    width: `${len}px`,
+                    height: `${len}px`,
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animation: `float ${Math.random() * 10 + 5}s linear infinite`,
+                  }}
+                />
+              )
+            }
+            )}
           </div>
         </div>
         <div className="relative z-10 text-center text-white">
           <h1 className="text-6xl font-bold mb-4 animate-fade-in">
-            Your Name Here
+            Kevin Sullivan
           </h1>
           <p className="text-xl opacity-90">
-            Web Developer | Designer | Creative Thinker
+            Software Engineer | Problem Solver | Creative Thinker
           </p>
         </div>
       </section>
@@ -136,7 +62,11 @@ const LandingPage = () => {
             Nice to meet you!
           </h2>
           <p className="text-xl text-gray-600">
-            [Your elevator pitch will go here]
+            As a Software Engineer, I thrive on solving complex technical challenges across the full technology stack.
+            By day, I architect and implement browser-based security solutions at Forcepoint, working with everything from C++ systems components to JavaScript browser extensions.
+            My journey has evolved from building internal productivity tools with Python and JavaScript, to full-stack development with Python Django and React, through test automation, and to my current focus on systems programming and security.
+            By night - or rather, in the early morning hours - I continue to expand my expertise across the software spectrum, exploring technologies like Rust while pursuing my MSc. in Computer Science at the International University of Applied Sciences, a journey that began in January 2023.
+            This blend of practical experience and academic pursuit fuels building efficient, maintainable and secure software systems that make a meaningful impact.
           </p>
         </div>
       </section>
@@ -192,4 +122,4 @@ const LandingPage = () => {
   );
 };
 
-// export default LandingPage;
+export default LandingPage;
