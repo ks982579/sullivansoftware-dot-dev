@@ -1,20 +1,21 @@
 // app/page.tsx
-'use client';
+// 'use client';
 import Image from "next/image";
-import { useEffect, useState, ReactNode } from 'react';
+// import { useEffect, useState, ReactNode } from 'react';
 import Link from 'next/link';
 
 const LandingPage = (): React.ReactNode => {
-  const [scrollPosition, setScrollPosition] = useState(0);
+  // const [scrollPosition, setScrollPosition] = useState(0);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollPosition(window.scrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // -- Can be for adding progress indicators or triggering animations
+  // useEffect(() => {
+  //   const handleScroll = () => {
+  //     setScrollPosition(window.scrollY);
+  //   };
+  //
+  //   window.addEventListener('scroll', handleScroll);
+  //   return () => window.removeEventListener('scroll', handleScroll);
+  // }, []);
 
   return (
     // <div className="night-sky">
@@ -72,43 +73,43 @@ const LandingPage = (): React.ReactNode => {
       </section>
 
       {/* About Section */}
-      <section className="h-screen snap-start bg-gray-50 flex items-center justify-center p-8">
-        <div className="max-w-3xl">
+      <section className="h-screen snap-start bg-gray-50 flex flex-col items-center justify-center p-8">
+        <div className="flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold mb-6 text-gray-800">About Me</h2>
           <p className="text-xl text-gray-600">
-            [Your about section content will go here]
+            Learn more about what I do and how I do it!
           </p>
-          <Link
-            href="/about"
-            className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Learn More About Me
-          </Link>
         </div>
+        <Link
+          href="/about"
+          className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Learn More About Me
+        </Link>
       </section>
 
       {/* Projects Section */}
-      <section className="h-screen snap-start bg-white flex items-center justify-center p-8">
-        <div className="max-w-3xl">
+      <section className="h-screen snap-start bg-white flex flex-col items-center justify-center p-8">
+        <div className="max-w-3xl flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold mb-6 text-gray-800">My Projects</h2>
           <p className="text-xl text-gray-600">
-            [Your projects overview will go here]
+            Come and see what I am working on!
           </p>
-          <Link
-            href="/projects"
-            className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            View All Projects
-          </Link>
         </div>
+        <Link
+          href="/projects"
+          className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          View All Projects
+        </Link>
       </section>
 
       {/* Blog Section */}
-      <section className="h-screen snap-start bg-gray-50 flex items-center justify-center p-8">
-        <div className="max-w-3xl">
+      <section className="h-screen snap-start bg-gray-50 flex flex-col items-center justify-center p-8">
+        <div className="max-w-3xl flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold mb-6 text-gray-800">Blog</h2>
           <p className="text-xl text-gray-600">
-            [Your blog preview will go here]
+            Explore some interesting blogs I've written.
           </p>
           <Link
             href="/blog"
