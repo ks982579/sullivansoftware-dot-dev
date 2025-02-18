@@ -44,3 +44,13 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Giving Credit
 
 - Shooting Star CSS from [CodeSandBox.io](https://codesandbox.io/p/sandbox/css-shooting-stars-animation-w96ut)
+
+## Material UI
+
+Material UI fits well into React applications.
+Looks like there is a little extra configuration for Next.js.
+Check out [Next.js Integration | mui.com](https://mui.com/material-ui/integrations/nextjs/) for info.
+
+```bash
+npm install @mui/material-nextjs @emotion/cache
+```

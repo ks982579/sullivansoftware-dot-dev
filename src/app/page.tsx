@@ -2,9 +2,14 @@
 // 'use client';
 import Image from "next/image";
 // import { useEffect, useState, ReactNode } from 'react';
-import Link from 'next/link';
+import Link from "next/link";
 
-const LandingPage = (): React.ReactNode => {
+// https://stackoverflow.com/questions/58123398/when-to-use-jsx-element-vs-reactnode-vs-reactelement
+
+// Where <P,T> is Props and Type.
+type LandingReturn = React.ReactElement<null, any>;
+
+const LandingPage = (): LandingReturn => {
   // const [scrollPosition, setScrollPosition] = useState(0);
 
   // -- Can be for adding progress indicators or triggering animations
@@ -41,9 +46,8 @@ const LandingPage = (): React.ReactNode => {
                     animation: `float ${Math.random() * 10 + 5}s linear infinite`,
                   }}
                 />
-              )
-            }
-            )}
+              );
+            })}
           </div>
         </div>
         <div className="relative z-10 text-center text-white">
@@ -63,11 +67,21 @@ const LandingPage = (): React.ReactNode => {
             Nice to meet you!
           </h2>
           <p className="text-xl text-gray-600">
-            As a Software Engineer, I thrive on solving complex technical challenges across the full technology stack.
-            By day, I architect and implement browser-based security solutions at Forcepoint, working with everything from C++ systems components to JavaScript browser extensions.
-            My journey has evolved from building internal productivity tools with Python and JavaScript, to full-stack development with Python Django and React, through test automation, and to my current focus on systems programming and security.
-            By night - or rather, in the early morning hours - I continue to expand my expertise across the software spectrum, exploring technologies like Rust while pursuing my MSc. in Computer Science at the International University of Applied Sciences, a journey that began in January 2023.
-            This blend of practical experience and academic pursuit fuels building efficient, maintainable and secure software systems that make a meaningful impact.
+            As a Software Engineer, I thrive on solving complex technical
+            challenges across the full technology stack. By day, I architect and
+            implement browser-based security solutions at Forcepoint, working
+            with everything from C++ systems components to JavaScript browser
+            extensions. My journey has evolved from building internal
+            productivity tools with Python and JavaScript, to full-stack
+            development with Python Django and React, through test automation,
+            and to my current focus on systems programming and security. By
+            night - or rather, in the early morning hours - I continue to expand
+            my expertise across the software spectrum, exploring technologies
+            like Rust while pursuing my MSc. in Computer Science at the
+            International University of Applied Sciences, a journey that began
+            in January 2023. This blend of practical experience and academic
+            pursuit fuels building efficient, maintainable and secure software
+            systems that make a meaningful impact.
           </p>
         </div>
       </section>
