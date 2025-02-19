@@ -54,3 +54,6 @@ Check out [Next.js Integration | mui.com](https://mui.com/material-ui/integratio
 ```bash
 npm install @mui/material-nextjs @emotion/cache
 ```
+
+Yes, I started this project with an idea of picking up TailWind.
+However, I founds MUI, and am making the move before it's too late.

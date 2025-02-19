@@ -4,7 +4,7 @@ const AboutPage = (): React.JSX.Element => {
   return (
     <Container>
       <Box>
-        <Typography>Hello, this is Kevin</Typography>
+        <Typography sx={{ mx: 1 }}>Hello, this is Kevin</Typography>
       </Box>
     </Container>
   );
