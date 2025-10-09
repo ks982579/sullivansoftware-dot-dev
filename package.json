@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit --project tsconfig.json"
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "netlify": "netlify"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -15,6 +16,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.4.4",
     "@mui/material-nextjs": "^6.4.3",
+    "netlify-cli": "^23.9.1",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
