@@ -6,7 +6,7 @@ export default function LandingPage() {
       {/* Hero Section - Japanese Retro */}
       <section className="relative min-h-screen flex items-center justify-center px-6 py-20 overflow-hidden">
         {/* Retro Grid Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 opacity-[0.08]">
           <div
             className="w-full h-full"
             style={{
@@ -109,7 +109,7 @@ export default function LandingPage() {
             {/* Projects Card */}
             <Link
               href="/projects"
-              className="group p-8 bg-background rounded-lg border-2 border-primary/20 hover:border-primary/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+              className="group p-8 bg-background rounded-lg border-2 border-primary/20 hover:border-primary/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
             >
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                 <span className="text-2xl">💻</span>
@@ -117,7 +117,7 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-text-primary mb-3">
                 Projects
               </h3>
-              <p className="text-text-secondary leading-relaxed mb-4">
+              <p className="text-text-secondary leading-relaxed mb-4 flex-grow">
                 Explore my latest work and side projects. From web apps to
                 system tools.
               </p>
@@ -129,7 +129,7 @@ export default function LandingPage() {
             {/* Blog Card */}
             <Link
               href="/blogs"
-              className="group p-8 bg-background rounded-lg border-2 border-secondary/20 hover:border-secondary/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+              className="group p-8 bg-background rounded-lg border-2 border-secondary/20 hover:border-secondary/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
             >
               <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-secondary/20 transition-colors">
                 <span className="text-2xl">✍️</span>
@@ -137,7 +137,7 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-text-primary mb-3">
                 Blog
               </h3>
-              <p className="text-text-secondary leading-relaxed mb-4">
+              <p className="text-text-secondary leading-relaxed mb-4 flex-grow">
                 Thoughts on software engineering, learning, and technology.
               </p>
               <span className="text-secondary font-semibold group-hover:translate-x-2 inline-block transition-transform">
@@ -148,7 +148,7 @@ export default function LandingPage() {
             {/* About Card */}
             <Link
               href="/about"
-              className="group p-8 bg-background rounded-lg border-2 border-accent-orange/20 hover:border-accent-orange/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+              className="group p-8 bg-background rounded-lg border-2 border-accent-orange/20 hover:border-accent-orange/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
             >
               <div className="w-12 h-12 bg-accent-orange/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent-orange/20 transition-colors">
                 <span className="text-2xl">👨‍💻</span>
@@ -156,7 +156,7 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-text-primary mb-3">
                 About
               </h3>
-              <p className="text-text-secondary leading-relaxed mb-4">
+              <p className="text-text-secondary leading-relaxed mb-4 flex-grow">
                 Learn more about my background, skills, and what drives me.
               </p>
               <span className="text-accent-orange font-semibold group-hover:translate-x-2 inline-block transition-transform">
