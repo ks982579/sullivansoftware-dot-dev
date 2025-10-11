@@ -1,15 +1,7 @@
 // app/page.tsx
-// 'use client';
-import Image from "next/image";
-// import { useEffect, useState, ReactNode } from 'react';
 import Link from "next/link";
 
-// https://stackoverflow.com/questions/58123398/when-to-use-jsx-element-vs-reactnode-vs-reactelement
-
-// Where <P,T> is Props and Type.
-type LandingReturn = React.ReactElement<null, any>;
-
-const LandingPage = (): LandingReturn => {
+const LandingPage = () => {
   // const [scrollPosition, setScrollPosition] = useState(0);
 
   // -- Can be for adding progress indicators or triggering animations
@@ -33,7 +25,7 @@ const LandingPage = (): LandingReturn => {
           <div className="animate-pulse absolute inset-0 opacity-20">
             {/* Animated background elements */}
             {[...Array(100)].map((_, i) => {
-              let len: number = Math.max(Math.random() * 20, 5);
+              const len: number = Math.max(Math.random() * 20, 5);
               return (
                 <div
                   key={i}
@@ -123,7 +115,7 @@ const LandingPage = (): LandingReturn => {
         <div className="max-w-3xl flex flex-col items-center justify-center">
           <h2 className="text-4xl font-bold mb-6 text-gray-800">Blog</h2>
           <p className="text-xl text-gray-600">
-            Explore some interesting blogs I've written.
+            Explore some interesting blogs I&apos;ve written.
           </p>
           <Link
             href="/blogs"
