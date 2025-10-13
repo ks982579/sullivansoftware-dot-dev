@@ -4,13 +4,13 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-secondary text-white py-12 px-6">
+    <footer className="bg-secondary text-white py-8 sm:py-12 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         {/* Main Footer Content */}
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
           {/* Branding */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Kevin Sullivan</h3>
+          <div className="sm:col-span-2 md:col-span-1">
+            <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Kevin Sullivan</h3>
             <p className="text-white/80 text-sm leading-relaxed">
               Software Engineer crafting elegant solutions to complex problems.
             </p>
@@ -18,12 +18,12 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold mb-3 text-white/90">Quick Links</h4>
+            <h4 className="font-semibold mb-2 sm:mb-3 text-white/90">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
                   href="/about"
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="text-white/70 hover:text-white transition-colors duration-200"
                 >
                   About
                 </Link>
@@ -31,7 +31,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/projects"
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="text-white/70 hover:text-white transition-colors duration-200"
                 >
                   Projects
                 </Link>
@@ -39,7 +39,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/blogs"
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="text-white/70 hover:text-white transition-colors duration-200"
                 >
                   Blog
                 </Link>
@@ -49,8 +49,8 @@ export default function Footer() {
 
           {/* Social Links */}
           <div>
-            <h4 className="font-semibold mb-3 text-white/90">Connect</h4>
-            <div className="flex gap-4">
+            <h4 className="font-semibold mb-2 sm:mb-3 text-white/90">Connect</h4>
+            <div className="flex gap-3 sm:gap-4">
               <a
                 href="https://github.com/ks982579"
                 target="_blank"
@@ -93,11 +93,11 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/60">
-          <p>© {currentYear} Kevin Sullivan. All rights reserved.</p>
-          <p className="flex items-center gap-1">
+        <div className="pt-6 sm:pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 text-xs sm:text-sm text-white/60">
+          <p className="text-center sm:text-left">© {currentYear} Kevin Sullivan. All rights reserved.</p>
+          <p className="flex items-center gap-1 text-center sm:text-right">
             Built with{" "}
-            <span className="text-accent-orange" aria-label="love">
+            <span className="text-accent-orange animate-pulse" aria-label="love">
               ♥
             </span>{" "}
             using Next.js
