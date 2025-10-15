@@ -54,21 +54,6 @@ const AboutPage = (): React.JSX.Element => {
           {/* Introduction with Image */}
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div
-              className={`transition-all duration-700 delay-100 ${
-                isVisible
-                  ? "opacity-100 translate-x-0"
-                  : "opacity-0 -translate-x-8"
-              }`}
-            >
-              <div className="relative aspect-square rounded-lg overflow-hidden border-4 border-primary/20 shadow-lg hover:border-primary/40 transition-all duration-300 hover:scale-105">
-                {/* Placeholder for profile image */}
-                <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
-                  <span className="text-6xl">👨‍💻</span>
-                </div>
-              </div>
-            </div>
-
-            <div
               className={`space-y-4 transition-all duration-700 delay-200 ${
                 isVisible
                   ? "opacity-100 translate-x-0"
@@ -79,13 +64,46 @@ const AboutPage = (): React.JSX.Element => {
                 Hello, I&apos;m Kevin
               </h2>
               <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
-                [Your introduction paragraph here - tell your story, what
-                drives you, your passion for software engineering, etc.]
+                {/*Your introduction paragraph here - tell your story, what drives
+                you, your passion for software engineering, etc.*/}
+                A software engineer with full-stack experience working with
+                TypeScript and React, and C# .NET and .NET Framework, and Python
+                Django. I have a passion for building scalable and performant
+                solutions to challenging problems. I also have a passion for
+                writing code in Rust 🦀.
               </p>
               <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
-                [Second paragraph - your journey into tech, key experiences,
-                what you love about building software, etc.]
+                {/*Second paragraph - your journey into tech, key experiences,
+                what you love about building software, etc...*/}
+                Starting in the field of Actuarial Science (and Economics),
+                I&apos;ve always loved math, science and technology (and
+                coffee)! I got my start in Software engineering working
+                full-stack with Python Django and React. I then moved on to
+                working as an automation test engineer for a bit before
+                transitioning to a developing cybersecurity software in C++ and
+                Objective-C. Now I'm back into a full-stack role with a global
+                ecommerce platform building solutions in TypeScript React and
+                C#.
               </p>
+            </div>
+            <div
+              className={`transition-all duration-700 delay-100 ${
+                isVisible
+                  ? "opacity-100 translate-x-0"
+                  : "opacity-0 -translate-x-8"
+              }`}
+            >
+              <div className="relative aspect-square rounded-lg overflow-hidden border-4 border-primary/20 shadow-lg hover:border-primary/40 transition-all duration-300 hover:scale-105">
+                {/* Placeholder for profile image */}
+                <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
+                  <Image
+                    alt="Image of Software Engineer Kevin Sullivan"
+                    src="/images/selfie-coffee-002.png"
+                    width={600}
+                    height={600}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -220,7 +238,7 @@ const AboutPage = (): React.JSX.Element => {
                       >
                         {skill}
                       </span>
-                    )
+                    ),
                   )}
                 </div>
               </div>
