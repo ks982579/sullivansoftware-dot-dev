@@ -44,6 +44,14 @@ export default function Footer() {
                   Blog
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/todo"
+                  className="text-white/70 hover:text-white transition-colors duration-200"
+                >
+                  Todo
+                </Link>
+              </li>
             </ul>
           </div>
 
