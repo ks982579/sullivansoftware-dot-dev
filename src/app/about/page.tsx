@@ -81,7 +81,7 @@ const AboutPage = (): React.JSX.Element => {
                 full-stack with Python Django and React. I then moved on to
                 working as an automation test engineer for a bit before
                 transitioning to a developing cybersecurity software in C++ and
-                Objective-C. Now I'm back into a full-stack role with a global
+                Objective-C. Now I&apos;m back into a full-stack role with a global
                 ecommerce platform building solutions in TypeScript React and
                 C#.
               </p>
