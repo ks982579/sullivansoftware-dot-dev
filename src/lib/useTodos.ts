@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export type TodoType = 'epic' | 'story' | 'task';
+export type TodoType = 'project' | 'epic' | 'story' | 'task';
 
 export interface Todo {
   id: string;
@@ -15,20 +15,22 @@ export interface Todo {
   order: number;
 }
 
-const STORAGE_KEY = 'todos_data';
+// Get storage key for a specific workspace
+const getStorageKey = (workspaceId: string) => `todos_workspace_${workspaceId}`;
 
 // Helper to generate unique IDs
 const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const useTodos = () => {
+export const useTodos = (workspaceId: string) => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount or when workspace changes
   useEffect(() => {
-    const savedTodos = localStorage.getItem(STORAGE_KEY);
+    const storageKey = getStorageKey(workspaceId);
+    const savedTodos = localStorage.getItem(storageKey);
     if (savedTodos) {
       try {
         const parsed = JSON.parse(savedTodos);
@@ -37,16 +39,19 @@ export const useTodos = () => {
         console.error('Failed to parse todos from localStorage:', error);
         setTodos([]);
       }
+    } else {
+      setTodos([]);
     }
     setIsLoaded(true);
-  }, []);
+  }, [workspaceId]);
 
   // Save to localStorage whenever todos change
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+      const storageKey = getStorageKey(workspaceId);
+      localStorage.setItem(storageKey, JSON.stringify(todos));
     }
-  }, [todos, isLoaded]);
+  }, [todos, isLoaded, workspaceId]);
 
   // Add a new todo
   const addTodo = useCallback(
@@ -148,7 +153,14 @@ export const useTodos = () => {
     return todos.filter((t) => t.archived).sort((a, b) => b.createdAt - a.createdAt);
   }, [todos]);
 
-  // Get all epics (top-level items)
+  // Get all projects (top-level items)
+  const getProjects = useCallback((includeArchived = false) => {
+    return todos
+      .filter((t) => t.type === 'project' && t.parentId === null && (includeArchived || !t.archived))
+      .sort((a, b) => a.order - b.order);
+  }, [todos]);
+
+  // Get all epics (can be top-level or within projects)
   const getEpics = useCallback((includeArchived = false) => {
     return todos
       .filter((t) => t.type === 'epic' && t.parentId === null && (includeArchived || !t.archived))
@@ -176,6 +188,7 @@ export const useTodos = () => {
     reorderTodos,
     getChildren,
     getArchived,
+    getProjects,
     getEpics,
     getTodoById,
   };

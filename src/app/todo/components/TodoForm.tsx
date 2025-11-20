@@ -49,6 +49,7 @@ export const TodoForm = ({
           onChange={(e) => setType(e.target.value as TodoType)}
           className="px-4 py-2 bg-white border-2 border-primary/20 rounded focus:outline-none focus:border-primary transition-colors duration-200 text-text-primary font-medium shadow-sm"
         >
+          <option value="project">Project</option>
           <option value="epic">Epic</option>
           <option value="story">Story</option>
           <option value="task">Task</option>

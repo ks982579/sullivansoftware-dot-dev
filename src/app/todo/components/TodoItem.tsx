@@ -17,12 +17,14 @@ interface TodoItemProps {
 }
 
 const typeColors = {
+  project: 'bg-primary/20 border-primary text-primary font-bold',
   epic: 'bg-primary/10 border-primary text-primary',
   story: 'bg-secondary/10 border-secondary text-secondary',
   task: 'bg-accent/10 border-accent text-accent',
 };
 
 const typeLabels = {
+  project: 'Project',
   epic: 'Epic',
   story: 'Story',
   task: 'Task',
@@ -89,22 +91,36 @@ export const TodoItem = ({
         {/* Content */}
         <div className="flex-1 min-w-0">
           {isEditing ? (
-            <input
-              autoFocus
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleSaveEdit}
-              onKeyDown={handleKeyDown}
-              className="w-full px-3 py-2 border-2 border-primary/30 rounded bg-white text-text-primary focus:outline-none focus:border-primary"
-              placeholder="Enter task name..."
-            />
+            todo.type === 'task' ? (
+              <textarea
+                autoFocus
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={handleSaveEdit}
+                onKeyDown={handleKeyDown}
+                className="w-full px-3 py-2 border-2 border-primary/30 rounded bg-white text-text-primary focus:outline-none focus:border-primary resize-none"
+                placeholder="Enter task description..."
+                rows={4}
+                style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+              />
+            ) : (
+              <input
+                autoFocus
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={handleSaveEdit}
+                onKeyDown={handleKeyDown}
+                className="w-full px-3 py-2 border-2 border-primary/30 rounded bg-white text-text-primary focus:outline-none focus:border-primary"
+                placeholder="Enter name..."
+              />
+            )
           ) : (
             <div
               onClick={() => setIsEditing(true)}
               className="cursor-text"
             >
               <p
-                className={`text-base font-medium break-words ${
+                className={`text-base font-medium break-words whitespace-pre-wrap ${
                   todo.completed
                     ? 'line-through text-gray-500'
                     : 'text-text-primary'

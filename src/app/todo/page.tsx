@@ -1,14 +1,27 @@
 'use client';
 
 import { useTodos } from '@/lib/useTodos';
+import { useWorkspaces } from '@/lib/useWorkspaces';
 import { TodoForm } from './components/TodoForm';
+import { ProjectSection } from './components/ProjectSection';
 import { EpicSection } from './components/EpicSection';
 import { ArchiveSection } from './components/ArchiveSection';
+import { WorkspaceTabs } from './components/WorkspaceTabs';
 import { useEffect, useState } from 'react';
 
 export default function TodoPage() {
   const {
-    isLoaded,
+    workspaces,
+    activeWorkspaceId,
+    isLoaded: workspacesLoaded,
+    createWorkspace,
+    renameWorkspace,
+    deleteWorkspace,
+    switchWorkspace,
+  } = useWorkspaces();
+
+  const {
+    isLoaded: todosLoaded,
     addTodo,
     updateTodo,
     deleteTodo,
@@ -18,8 +31,9 @@ export default function TodoPage() {
     reorderTodos,
     getChildren,
     getArchived,
+    getProjects,
     getEpics,
-  } = useTodos();
+  } = useTodos(activeWorkspaceId);
 
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -28,18 +42,19 @@ export default function TodoPage() {
     setMounted(true);
   }, []);
 
-  if (!mounted || !isLoaded) {
+  if (!mounted || !workspacesLoaded || !todosLoaded) {
     return (
       <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-block p-8 bg-paper rounded-lg border-2 border-primary/20">
-            <p className="text-text-primary text-lg font-medium">Loading your todos...</p>
+            <p className="text-text-primary text-lg font-medium">Loading your workspace...</p>
           </div>
         </div>
       </div>
     );
   }
 
+  const projects = getProjects(false);
   const epics = getEpics(false);
   const archivedTodos = getArchived();
 
@@ -54,7 +69,7 @@ export default function TodoPage() {
     }}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-12 animate-fade-in relative">
+        <div className="mb-8 animate-fade-in relative">
           {/* Corner Accent - Top Left */}
           <div className="absolute -top-4 -left-4 w-8 h-8 border-t-4 border-l-4 border-primary opacity-40" />
           {/* Corner Accent - Top Right */}
@@ -64,13 +79,23 @@ export default function TodoPage() {
             My Tasks
           </h1>
           <p className="text-lg text-text-secondary mb-4">
-            Organize your work with Epics, Stories, and Tasks
+            Organize your work across multiple workspaces
           </p>
           <div className="w-20 h-1 bg-primary rounded-full" />
         </div>
 
+        {/* Workspace Tabs */}
+        <WorkspaceTabs
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          onSwitchWorkspace={switchWorkspace}
+          onCreateWorkspace={createWorkspace}
+          onDeleteWorkspace={deleteWorkspace}
+          onRenameWorkspace={renameWorkspace}
+        />
+
         {/* Empty State */}
-        {epics.length === 0 && archivedTodos.length === 0 && (
+        {projects.length === 0 && epics.length === 0 && archivedTodos.length === 0 && (
           <div className="text-center py-16 px-6 bg-paper rounded-lg border-4 border-primary/20 animate-fade-in">
             <svg
               className="w-20 h-20 text-primary/40 mx-auto mb-6"
@@ -89,20 +114,20 @@ export default function TodoPage() {
               No tasks yet
             </h2>
             <p className="text-text-secondary mb-8 text-lg">
-              Start by creating your first Epic, Story, or Task
+              Start by creating your first Project, Epic, Story, or Task
             </p>
           </div>
         )}
 
-        {/* Add New Epic Form */}
-        {epics.length > 0 || archivedTodos.length > 0 ? (
+        {/* Add New Project/Epic Form */}
+        {projects.length > 0 || epics.length > 0 || archivedTodos.length > 0 ? (
           <div className="mb-8">
             <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
               Add to Backlog
             </h2>
             <TodoForm
               onAdd={(title, type) => addTodo(title, type, null)}
-              defaultType="epic"
+              defaultType="project"
               showTypeSelector
             />
           </div>
@@ -110,37 +135,70 @@ export default function TodoPage() {
           <div className="mb-8">
             <TodoForm
               onAdd={(title, type) => addTodo(title, type, null)}
-              defaultType="epic"
+              defaultType="project"
               showTypeSelector
             />
           </div>
         )}
 
-        {/* Main Content */}
-        {epics.length > 0 && (
+        {/* Main Content - Projects and Standalone Epics */}
+        {(projects.length > 0 || epics.length > 0) && (
           <div className="space-y-8 animate-fade-in">
-            <div>
-              <h2 className="text-xl font-bold text-text-primary mb-6">
-                Backlog ({epics.length})
-              </h2>
+            {/* Projects Section */}
+            {projects.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-text-primary mb-6">
+                  Projects ({projects.length})
+                </h2>
 
-              {epics.map((epic) => (
-                <EpicSection
-                  key={epic.id}
-                  epic={epic}
-                  stories={getChildren(epic.id)}
-                  onToggleComplete={toggleComplete}
-                  onArchive={archiveTodo}
-                  onDelete={deleteTodo}
-                  onEdit={(id, title) => updateTodo(id, { title })}
-                  onAddTodo={addTodo}
-                  onReorderTodos={reorderTodos}
-                  getChildren={getChildren}
-                  draggedItemId={draggedItemId}
-                  onDragItemChange={setDraggedItemId}
-                />
-              ))}
-            </div>
+                <div className="space-y-8">
+                  {projects.map((project) => (
+                    <ProjectSection
+                      key={project.id}
+                      project={project}
+                      epics={getChildren(project.id)}
+                      onToggleComplete={toggleComplete}
+                      onArchive={archiveTodo}
+                      onDelete={deleteTodo}
+                      onEdit={(id, title) => updateTodo(id, { title })}
+                      onAddTodo={addTodo}
+                      onReorderTodos={reorderTodos}
+                      getChildren={getChildren}
+                      draggedItemId={draggedItemId}
+                      onDragItemChange={setDraggedItemId}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Standalone Epics (not in a project) */}
+            {epics.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-text-primary mb-6">
+                  Standalone Epics ({epics.length})
+                </h2>
+
+                <div className="space-y-8">
+                  {epics.map((epic) => (
+                    <EpicSection
+                      key={epic.id}
+                      epic={epic}
+                      stories={getChildren(epic.id)}
+                      onToggleComplete={toggleComplete}
+                      onArchive={archiveTodo}
+                      onDelete={deleteTodo}
+                      onEdit={(id, title) => updateTodo(id, { title })}
+                      onAddTodo={addTodo}
+                      onReorderTodos={reorderTodos}
+                      getChildren={getChildren}
+                      draggedItemId={draggedItemId}
+                      onDragItemChange={setDraggedItemId}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
