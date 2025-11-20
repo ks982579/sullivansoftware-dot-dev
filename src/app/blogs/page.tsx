@@ -5,37 +5,60 @@ export default function BlogsPage() {
   const posts = getAllPosts();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-4xl font-bold mb-8 text-gray-900">Blog Posts</h1>
+    <main className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8" style={{
+      backgroundImage: `
+        linear-gradient(rgba(139, 69, 19, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 69, 19, 0.08) 1px, transparent 1px)
+      `,
+      backgroundSize: "50px 50px",
+      backgroundAttachment: "fixed",
+    }}>
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 animate-fade-in relative">
+          {/* Corner Accent - Top Left */}
+          <div className="absolute -top-4 -left-4 w-8 h-8 border-t-4 border-l-4 border-primary opacity-40" />
+          {/* Corner Accent - Top Right */}
+          <div className="absolute -top-4 -right-4 w-8 h-8 border-t-4 border-r-4 border-primary opacity-40" />
+
+          <h1 className="text-4xl sm:text-5xl font-bold text-primary mb-4">
+            Blog Posts
+          </h1>
+          <p className="text-lg text-text-secondary mb-4">
+            Thoughts, tutorials, and insights
+          </p>
+          <div className="w-20 h-1 bg-primary rounded-full" />
+        </div>
 
         {posts.length === 0 ? (
-          <p className="text-gray-600">
-            No blog posts yet. Check back soon!
-          </p>
+          <div className="text-center py-16 px-6 bg-paper rounded-lg border-4 border-primary/20 animate-fade-in">
+            <p className="text-text-primary text-lg font-medium">
+              No blog posts yet. Check back soon!
+            </p>
+          </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6 animate-fade-in">
             {posts.map((post) => (
               <article
                 key={post.slug}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+                className="bg-paper rounded-lg border-2 border-primary/20 p-6 hover:border-primary/40 hover:shadow-md transition-all duration-200"
               >
                 <Link href={`/blogs/${post.slug}`}>
-                  <h2 className="text-2xl font-bold text-gray-900 hover:text-blue-600 mb-2">
+                  <h2 className="text-2xl font-bold text-primary hover:text-secondary mb-2 transition-colors">
                     {post.title}
                   </h2>
                 </Link>
-                <div className="text-sm text-gray-500 mb-3">
+                <div className="text-sm text-text-secondary mb-3">
                   <span>{new Date(post.pubDate).toLocaleDateString()}</span>
                   {post.author && <span> • {post.author}</span>}
                 </div>
-                <p className="text-gray-700 mb-4">{post.description}</p>
+                <p className="text-text-primary mb-4">{post.description}</p>
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {post.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                        className="px-3 py-1 bg-secondary/10 border border-secondary text-secondary text-xs font-semibold rounded"
                       >
                         {tag}
                       </span>
@@ -47,6 +70,24 @@ export default function BlogsPage() {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Styles */}
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out;
+        }
+      `}</style>
+    </main>
   );
 }

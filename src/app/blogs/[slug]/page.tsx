@@ -41,23 +41,30 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <article className="max-w-4xl mx-auto px-4">
+    <main className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8" style={{
+      backgroundImage: `
+        linear-gradient(rgba(139, 69, 19, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 69, 19, 0.08) 1px, transparent 1px)
+      `,
+      backgroundSize: "50px 50px",
+      backgroundAttachment: "fixed",
+    }}>
+      <article className="max-w-4xl mx-auto">
         {/* Back to blogs link */}
         <Link
           href="/blogs"
-          className="text-blue-600 hover:text-blue-800 mb-6 inline-block"
+          className="text-primary hover:text-secondary mb-6 inline-block transition-colors font-medium"
         >
           ← Back to all posts
         </Link>
 
         {/* Header */}
         <header className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-primary mb-4">
             {post.title}
           </h1>
-          <div className="text-gray-600 mb-4">
-            <time dateTime={post.pubDate}>
+          <div className="text-text-secondary mb-6">
+            <time dateTime={post.pubDate} className="font-medium">
               {new Date(post.pubDate).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
@@ -71,7 +78,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                  className="px-3 py-1 bg-secondary/10 border border-secondary text-secondary text-xs font-semibold rounded"
                 >
                   {tag}
                 </span>
@@ -81,10 +88,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </header>
 
         {/* Content */}
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-paper rounded-lg border-2 border-primary/20 p-8 shadow-sm">
           <MdxContent source={post.content} />
         </div>
       </article>
-    </div>
+    </main>
   );
 }
