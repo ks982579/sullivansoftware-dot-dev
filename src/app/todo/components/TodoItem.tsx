@@ -54,8 +54,14 @@ export const TodoItem = ({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSaveEdit();
+      // Only save if Shift is NOT pressed (Shift+Enter adds newline)
+      if (!e.shiftKey) {
+        e.preventDefault();
+        handleSaveEdit();
+      }
+      // If Shift is pressed, allow default behavior (newline will be added)
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       setIsEditing(false);
       setEditTitle(todo.title);
     }

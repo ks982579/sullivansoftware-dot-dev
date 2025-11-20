@@ -38,7 +38,16 @@ export const EpicSection = ({
     parentId: string | null;
     index: number;
   } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(epic.title);
   const dragCounterRef = useRef(0);
+
+  const handleSaveEdit = () => {
+    if (editTitle.trim() && editTitle !== epic.title) {
+      onEdit(epic.id, editTitle);
+    }
+    setIsEditing(false);
+  };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, itemId: string) => {
     const index = stories.findIndex((child) => child.id === itemId);
@@ -110,7 +119,22 @@ export const EpicSection = ({
           </svg>
 
           <div className="text-left flex-1">
-            <h3 className="text-lg font-bold text-primary">{epic.title}</h3>
+            {isEditing ? (
+              <input
+                autoFocus
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={handleSaveEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEdit();
+                  if (e.key === 'Escape') setIsEditing(false);
+                }}
+                className="w-full px-3 py-2 border-2 border-primary/30 rounded bg-white text-primary focus:outline-none focus:border-primary font-bold text-lg"
+                placeholder="Epic name..."
+              />
+            ) : (
+              <h3 className="text-lg font-bold text-primary">{epic.title}</h3>
+            )}
             <div className="flex gap-2 mt-2 flex-wrap">
               <span className="px-3 py-1 text-xs font-semibold rounded border-2 bg-primary/10 border-primary text-primary">
                 Epic
@@ -123,6 +147,30 @@ export const EpicSection = ({
 
           {/* Action Buttons */}
           <div className="flex gap-2 ml-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              className="p-2 text-gray-500 hover:text-secondary hover:bg-secondary/10 rounded transition-colors duration-200"
+              title="Rename epic"
+              aria-label="Rename"
+              type="button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -275,7 +323,16 @@ const StorySection = ({
     parentId: string | null;
     index: number;
   } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(story.title);
   const dragCounterRef = useRef(0);
+
+  const handleSaveEdit = () => {
+    if (editTitle.trim() && editTitle !== story.title) {
+      onEdit(story.id, editTitle);
+    }
+    setIsEditing(false);
+  };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, itemId: string) => {
     const index = tasks.findIndex((child) => child.id === itemId);
@@ -344,7 +401,22 @@ const StorySection = ({
         </svg>
 
         <div className="text-left flex-1">
-          <h4 className="font-semibold text-secondary">{story.title}</h4>
+          {isEditing ? (
+            <input
+              autoFocus
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={handleSaveEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveEdit();
+                if (e.key === 'Escape') setIsEditing(false);
+              }}
+              className="w-full px-3 py-2 border-2 border-secondary/30 rounded bg-white text-secondary focus:outline-none focus:border-secondary font-semibold"
+              placeholder="Story name..."
+            />
+          ) : (
+            <h4 className="font-semibold text-secondary">{story.title}</h4>
+          )}
           <div className="flex gap-2 mt-1 flex-wrap">
             <span className="px-2 py-0.5 text-xs font-semibold rounded border bg-secondary/10 border-secondary text-secondary">
               Story
@@ -354,6 +426,30 @@ const StorySection = ({
         </div>
 
         <div className="flex gap-1 ml-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="p-1 text-gray-500 hover:text-secondary hover:bg-secondary/10 rounded transition-colors duration-200"
+            title="Rename story"
+            aria-label="Rename"
+            type="button"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
