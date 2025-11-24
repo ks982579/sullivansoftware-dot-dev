@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { educationData } from "@/lib/education";
 
 const AboutPage = (): React.JSX.Element => {
   const [isVisible, setIsVisible] = useState(false);
@@ -143,7 +144,7 @@ const AboutPage = (): React.JSX.Element => {
               <div className="p-6 bg-paper rounded-lg border-l-4 border-secondary shadow-sm hover:shadow-md transition-all duration-300">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
                   <h3 className="text-xl font-bold text-text-primary">
-                    [Previous Position Title]
+                    Junior Software Engineer
                   </h3>
                   <span className="text-sm text-text-secondary mt-1 sm:mt-0">
                     [Dates]
@@ -174,40 +175,31 @@ const AboutPage = (): React.JSX.Element => {
               Education
             </h2>
             <div className="space-y-6">
-              <div className="p-6 bg-paper rounded-lg border-l-4 border-accent-orange shadow-sm hover:shadow-md transition-all duration-300">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
-                  <h3 className="text-xl font-bold text-text-primary">
-                    MSc Computer Science
-                  </h3>
-                  <span className="text-sm text-text-secondary mt-1 sm:mt-0">
-                    Jan 2023 - Present
-                  </span>
-                </div>
-                <p className="text-accent-orange font-semibold mb-2">
-                  International University of Applied Sciences
-                </p>
-                <p className="text-text-secondary leading-relaxed">
-                  [Specialization areas, key courses, research interests, or
-                  thesis topic if applicable]
-                </p>
-              </div>
-
-              <div className="p-6 bg-paper rounded-lg border-l-4 border-primary shadow-sm hover:shadow-md transition-all duration-300">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
-                  <h3 className="text-xl font-bold text-text-primary">
-                    [Undergraduate Degree]
-                  </h3>
-                  <span className="text-sm text-text-secondary mt-1 sm:mt-0">
-                    [Dates]
-                  </span>
-                </div>
-                <p className="text-primary font-semibold mb-2">
-                  [University Name]
-                </p>
-                <p className="text-text-secondary leading-relaxed">
-                  [Relevant details about your undergraduate studies]
-                </p>
-              </div>
+              {educationData.map((edu) => (
+                <Link
+                  key={edu.id}
+                  href={`/about/edu/${edu.slug}`}
+                  className="block p-6 bg-paper rounded-lg border-l-4 border-accent-orange shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
+                    <h3 className="text-xl font-bold text-text-primary group-hover:text-accent-orange transition-colors duration-300">
+                      {edu.title}
+                    </h3>
+                    <span className="text-sm text-text-secondary mt-1 sm:mt-0">
+                      {edu.startDate} - {edu.endDate}
+                    </span>
+                  </div>
+                  <p className="text-accent-orange font-semibold mb-2">
+                    {edu.university}
+                  </p>
+                  <p className="text-text-secondary leading-relaxed">
+                    {edu.courses.length} course{edu.courses.length !== 1 ? "s" : ""} •{" "}
+                    <span className="group-hover:text-primary transition-colors duration-300">
+                      Click to explore →
+                    </span>
+                  </p>
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -263,7 +255,7 @@ const AboutPage = (): React.JSX.Element => {
               {/* Systems & Tools */}
               <div className="p-6 bg-paper rounded-lg border-2 border-accent-orange/20 hover:border-accent-orange/50 shadow-sm hover:shadow-md transition-all duration-300">
                 <h3 className="text-lg font-bold text-accent-orange mb-4">
-                  Systems & Tools
+                  Systems &apos; Tools
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {["Rust", "Git", "Docker", "Linux"].map((skill) => (
