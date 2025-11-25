@@ -93,6 +93,13 @@ export const ProjectSection = ({
     onDragItemChange?.(null);
   };
 
+  const handleDragEnd = () => {
+    dragCounterRef.current = 0;
+    setDragOverIndex(null);
+    setDraggedFrom(null);
+    onDragItemChange?.(null);
+  };
+
   return (
     <div className="mb-8 border-l-4 border-primary/50 pl-4">
       {/* Project Header */}
@@ -238,29 +245,32 @@ export const ProjectSection = ({
             {epics.map((epic, index) => (
               <div
                 key={epic.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, epic.id)}
+                onDragEnd={handleDragEnd}
                 onDrop={(e) => handleDrop(e, index)}
+                onDragEnter={() => setDragOverIndex(index)}
                 className={`transition-all duration-150 ${
-                  dragOverIndex === index ? 'opacity-50 scale-95' : ''
+                  draggedItemId === epic.id ? 'opacity-50 cursor-grabbing' : 'cursor-grab'
+                } ${
+                  dragOverIndex === index && draggedItemId !== epic.id
+                    ? 'border-t-4 border-primary pt-2'
+                    : ''
                 }`}
               >
-                <div
-                  onDragStart={(e) => handleDragStart(e, epic.id)}
-                  className={draggedItemId === epic.id ? 'opacity-50' : ''}
-                >
-                  <EpicSection
-                    epic={epic}
-                    stories={getChildren(epic.id)}
-                    onToggleComplete={onToggleComplete}
-                    onArchive={onArchive}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    onAddTodo={onAddTodo}
-                    onReorderTodos={onReorderTodos}
-                    getChildren={getChildren}
-                    draggedItemId={draggedItemId}
-                    onDragItemChange={onDragItemChange}
-                  />
-                </div>
+                <EpicSection
+                  epic={epic}
+                  stories={getChildren(epic.id)}
+                  onToggleComplete={onToggleComplete}
+                  onArchive={onArchive}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onAddTodo={onAddTodo}
+                  onReorderTodos={onReorderTodos}
+                  getChildren={getChildren}
+                  draggedItemId={draggedItemId}
+                  onDragItemChange={onDragItemChange}
+                />
               </div>
             ))}
           </div>

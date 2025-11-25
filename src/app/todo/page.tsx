@@ -37,6 +37,8 @@ export default function TodoPage() {
 
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [projectDragOverIndex, setProjectDragOverIndex] = useState<number | null>(null);
+  const [epicDragOverIndex, setEpicDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -57,6 +59,66 @@ export default function TodoPage() {
   const projects = getProjects(false);
   const epics = getEpics(false);
   const archivedTodos = getArchived();
+
+  // Handlers for project drag and drop
+  const handleProjectDragStart = (e: React.DragEvent<HTMLDivElement>, projectId: string) => {
+    setDraggedItemId(projectId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleProjectDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleProjectDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setProjectDragOverIndex(null);
+
+    if (!draggedItemId) return;
+    const fromIndex = projects.findIndex((p) => p.id === draggedItemId);
+    if (fromIndex !== -1 && fromIndex !== dropIndex) {
+      reorderTodos(null, fromIndex, dropIndex);
+    }
+
+    setDraggedItemId(null);
+  };
+
+  const handleProjectDragEnd = () => {
+    setDraggedItemId(null);
+    setProjectDragOverIndex(null);
+  };
+
+  // Handlers for epic drag and drop
+  const handleEpicDragStart = (e: React.DragEvent<HTMLDivElement>, epicId: string) => {
+    setDraggedItemId(epicId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleEpicDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleEpicDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEpicDragOverIndex(null);
+
+    if (!draggedItemId) return;
+    const fromIndex = epics.findIndex((ep) => ep.id === draggedItemId);
+    if (fromIndex !== -1 && fromIndex !== dropIndex) {
+      reorderTodos(null, fromIndex, dropIndex);
+    }
+
+    setDraggedItemId(null);
+  };
+
+  const handleEpicDragEnd = () => {
+    setDraggedItemId(null);
+    setEpicDragOverIndex(null);
+  };
 
   return (
     <main className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8" style={{
@@ -152,21 +214,37 @@ export default function TodoPage() {
                 </h2>
 
                 <div className="space-y-8">
-                  {projects.map((project) => (
-                    <ProjectSection
+                  {projects.map((project, index) => (
+                    <div
                       key={project.id}
-                      project={project}
-                      epics={getChildren(project.id)}
-                      onToggleComplete={toggleComplete}
-                      onArchive={archiveTodo}
-                      onDelete={deleteTodo}
-                      onEdit={(id, title) => updateTodo(id, { title })}
-                      onAddTodo={addTodo}
-                      onReorderTodos={reorderTodos}
-                      getChildren={getChildren}
-                      draggedItemId={draggedItemId}
-                      onDragItemChange={setDraggedItemId}
-                    />
+                      draggable
+                      onDragStart={(e) => handleProjectDragStart(e, project.id)}
+                      onDragEnd={handleProjectDragEnd}
+                      onDragOver={handleProjectDragOver}
+                      onDrop={(e) => handleProjectDrop(e, index)}
+                      onDragEnter={() => setProjectDragOverIndex(index)}
+                      className={`transition-all duration-150 ${
+                        draggedItemId === project.id ? 'opacity-50 cursor-grabbing' : 'cursor-grab'
+                      } ${
+                        projectDragOverIndex === index && draggedItemId !== project.id
+                          ? 'border-t-4 border-primary pt-4'
+                          : ''
+                      }`}
+                    >
+                      <ProjectSection
+                        project={project}
+                        epics={getChildren(project.id)}
+                        onToggleComplete={toggleComplete}
+                        onArchive={archiveTodo}
+                        onDelete={deleteTodo}
+                        onEdit={(id, title) => updateTodo(id, { title })}
+                        onAddTodo={addTodo}
+                        onReorderTodos={reorderTodos}
+                        getChildren={getChildren}
+                        draggedItemId={draggedItemId}
+                        onDragItemChange={setDraggedItemId}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -180,21 +258,37 @@ export default function TodoPage() {
                 </h2>
 
                 <div className="space-y-8">
-                  {epics.map((epic) => (
-                    <EpicSection
+                  {epics.map((epic, index) => (
+                    <div
                       key={epic.id}
-                      epic={epic}
-                      stories={getChildren(epic.id)}
-                      onToggleComplete={toggleComplete}
-                      onArchive={archiveTodo}
-                      onDelete={deleteTodo}
-                      onEdit={(id, title) => updateTodo(id, { title })}
-                      onAddTodo={addTodo}
-                      onReorderTodos={reorderTodos}
-                      getChildren={getChildren}
-                      draggedItemId={draggedItemId}
-                      onDragItemChange={setDraggedItemId}
-                    />
+                      draggable
+                      onDragStart={(e) => handleEpicDragStart(e, epic.id)}
+                      onDragEnd={handleEpicDragEnd}
+                      onDragOver={handleEpicDragOver}
+                      onDrop={(e) => handleEpicDrop(e, index)}
+                      onDragEnter={() => setEpicDragOverIndex(index)}
+                      className={`transition-all duration-150 ${
+                        draggedItemId === epic.id ? 'opacity-50 cursor-grabbing' : 'cursor-grab'
+                      } ${
+                        epicDragOverIndex === index && draggedItemId !== epic.id
+                          ? 'border-t-4 border-primary pt-4'
+                          : ''
+                      }`}
+                    >
+                      <EpicSection
+                        epic={epic}
+                        stories={getChildren(epic.id)}
+                        onToggleComplete={toggleComplete}
+                        onArchive={archiveTodo}
+                        onDelete={deleteTodo}
+                        onEdit={(id, title) => updateTodo(id, { title })}
+                        onAddTodo={addTodo}
+                        onReorderTodos={reorderTodos}
+                        getChildren={getChildren}
+                        draggedItemId={draggedItemId}
+                        onDragItemChange={setDraggedItemId}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

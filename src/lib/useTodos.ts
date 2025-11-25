@@ -113,29 +113,31 @@ export const useTodos = (workspaceId: string) => {
   // Reorder todos (for drag and drop)
   const reorderTodos = useCallback(
     (parentId: string | null, fromIndex: number, toIndex: number) => {
-      const itemsInParent = todos.filter(
-        (t) => t.parentId === parentId && !t.archived
-      );
+      setTodos((prev) => {
+        // Get items in parent using current state and sort by order
+        const itemsInParent = prev
+          .filter((t) => t.parentId === parentId && !t.archived)
+          .sort((a, b) => a.order - b.order);
 
-      if (fromIndex < 0 || fromIndex >= itemsInParent.length) return;
-      if (toIndex < 0 || toIndex >= itemsInParent.length) return;
+        if (fromIndex < 0 || fromIndex >= itemsInParent.length) return prev;
+        if (toIndex < 0 || toIndex >= itemsInParent.length) return prev;
+        if (fromIndex === toIndex) return prev;
 
-      // Create new array with reordered items
-      const reordered = [...itemsInParent];
-      const [removed] = reordered.splice(fromIndex, 1);
-      reordered.splice(toIndex, 0, removed);
+        // Create new array with reordered items
+        const reordered = [...itemsInParent];
+        const [removed] = reordered.splice(fromIndex, 1);
+        reordered.splice(toIndex, 0, removed);
 
-      // Update all items' order values
-      const idsToUpdate = reordered.map((t) => t.id);
+        // Update all items' order values
+        const idsToUpdate = reordered.map((t) => t.id);
 
-      setTodos((prev) =>
-        prev.map((todo) => {
+        return prev.map((todo) => {
           const newIndex = idsToUpdate.indexOf(todo.id);
           return newIndex !== -1 ? { ...todo, order: newIndex } : todo;
-        })
-      );
+        });
+      });
     },
-    [todos]
+    []
   );
 
   // Get children of a todo

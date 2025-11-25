@@ -94,6 +94,13 @@ export const EpicSection = ({
     onDragItemChange?.(null);
   };
 
+  const handleDragEnd = () => {
+    dragCounterRef.current = 0;
+    setDragOverIndex(null);
+    setDraggedFrom(null);
+    onDragItemChange?.(null);
+  };
+
   return (
     <div className="mb-8">
       {/* Epic Header */}
@@ -239,42 +246,45 @@ export const EpicSection = ({
             {stories.map((child, index) => (
               <div
                 key={child.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, child.id)}
+                onDragEnd={handleDragEnd}
                 onDrop={(e) => handleDrop(e, index)}
+                onDragEnter={() => setDragOverIndex(index)}
                 className={`transition-all duration-150 ${
-                  dragOverIndex === index ? 'opacity-50 scale-95' : ''
+                  draggedItemId === child.id ? 'opacity-50 cursor-grabbing' : 'cursor-grab'
+                } ${
+                  dragOverIndex === index && draggedItemId !== child.id
+                    ? 'border-t-4 border-secondary pt-2'
+                    : ''
                 }`}
               >
-                <div
-                  onDragStart={(e) => handleDragStart(e, child.id)}
-                  className={draggedItemId === child.id ? 'opacity-50' : ''}
-                >
-                  {child.type === 'story' ? (
-                    <StorySection
-                      story={child}
-                      tasks={getChildren(child.id)}
-                      onToggleComplete={onToggleComplete}
-                      onArchive={onArchive}
-                      onDelete={onDelete}
-                      onEdit={onEdit}
-                      onAddTodo={onAddTodo}
-                      onReorderTodos={onReorderTodos}
-                      draggedItemId={draggedItemId}
-                      onDragItemChange={onDragItemChange}
-                    />
-                  ) : (
-                    <TodoItem
-                      todo={child}
-                      onToggleComplete={onToggleComplete}
-                      onArchive={onArchive}
-                      onDelete={onDelete}
-                      onEdit={onEdit}
-                      isDragging={draggedItemId === child.id}
-                      onDragStart={(e) => handleDragStart(e, child.id)}
-                      onDragOver={handleDragOver}
-                      draggable
-                    />
-                  )}
-                </div>
+                {child.type === 'story' ? (
+                  <StorySection
+                    story={child}
+                    tasks={getChildren(child.id)}
+                    onToggleComplete={onToggleComplete}
+                    onArchive={onArchive}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    onAddTodo={onAddTodo}
+                    onReorderTodos={onReorderTodos}
+                    draggedItemId={draggedItemId}
+                    onDragItemChange={onDragItemChange}
+                  />
+                ) : (
+                  <TodoItem
+                    todo={child}
+                    onToggleComplete={onToggleComplete}
+                    onArchive={onArchive}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    isDragging={draggedItemId === child.id}
+                    onDragStart={(e) => handleDragStart(e, child.id)}
+                    onDragOver={handleDragOver}
+                    draggable
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -374,6 +384,13 @@ const StorySection = ({
       }
     }
 
+    setDraggedFrom(null);
+    onDragItemChange?.(null);
+  };
+
+  const handleDragEnd = () => {
+    dragCounterRef.current = 0;
+    setDragOverIndex(null);
     setDraggedFrom(null);
     onDragItemChange?.(null);
   };
@@ -516,26 +533,25 @@ const StorySection = ({
               <div
                 key={task.id}
                 onDrop={(e) => handleDrop(e, index)}
+                onDragEnter={() => setDragOverIndex(index)}
                 className={`transition-all duration-150 ${
-                  dragOverIndex === index ? 'opacity-50 scale-95' : ''
+                  dragOverIndex === index && draggedItemId !== task.id
+                    ? 'border-t-4 border-accent pt-2'
+                    : ''
                 }`}
               >
-                <div
+                <TodoItem
+                  todo={task}
+                  onToggleComplete={onToggleComplete}
+                  onArchive={onArchive}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  isDragging={draggedItemId === task.id}
                   onDragStart={(e) => handleDragStart(e, task.id)}
-                  className={draggedItemId === task.id ? 'opacity-50' : ''}
-                >
-                  <TodoItem
-                    todo={task}
-                    onToggleComplete={onToggleComplete}
-                    onArchive={onArchive}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    isDragging={draggedItemId === task.id}
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                    onDragOver={handleDragOver}
-                    draggable
-                  />
-                </div>
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                  draggable
+                />
               </div>
             ))}
           </div>

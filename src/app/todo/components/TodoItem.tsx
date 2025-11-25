@@ -11,6 +11,7 @@ interface TodoItemProps {
   onEdit: (id: string, title: string) => void;
   isDragging?: boolean;
   onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
   draggable?: boolean;
@@ -38,6 +39,7 @@ export const TodoItem = ({
   onEdit,
   isDragging = false,
   onDragStart,
+  onDragEnd,
   onDragOver,
   onDrop,
   draggable = true,
@@ -71,6 +73,7 @@ export const TodoItem = ({
     <div
       draggable={draggable}
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={`
