@@ -1,6 +1,14 @@
 # sullivansoftware-dot-dev
 
-Moving website from Astro to Next.js
+Kevin Sullivan's portfolio website built with Next.js 15, featuring a Japanese Retro design theme.
+
+## Features
+
+- **Portfolio & Projects** - Showcase of software engineering projects
+- **Blog** - Technical blog posts with MDX support and syntax highlighting
+- **Todo List** - Hierarchical todo management with workspaces (Project → Epic → Story → Task)
+- **Text-to-Speech** - Browser-based TTS tool with PDF text cleanup utilities
+- **Japanese Retro Theme** - Custom design system inspired by 1980s Sony aesthetics
 
 ## Next Intro
 
@@ -57,3 +65,7 @@ npm install @mui/material-nextjs @emotion/cache
 
 Yes, I started this project with an idea of picking up TailWind.
 However, I founds MUI, and am making the move before it's too late.
+
+---
+
+[Follow guide for NerdFonts and NeoVim development](https://gist.github.com/roopaish/e6ce7f9eb91634684d47e86d19e3e461)
