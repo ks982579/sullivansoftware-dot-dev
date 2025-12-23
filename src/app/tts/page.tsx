@@ -357,7 +357,7 @@ export default Tts;
  * - Removes square bracket references [1], [2], etc.
  */
 const _fmtTextForSpeech = (text: string): string => {
-    let tmp = text.split("__");
+    const tmp = text.split("__");
     text = tmp.join("\ndunder-score\n");
 
     // PDFs have this word-connect over new line
