@@ -147,7 +147,7 @@ export default function LandingPage() {
       {/* Quick Links Section */}
       <section className="py-16 sm:py-20 px-4 sm:px-6 bg-paper">
         <div className="max-w-6xl mx-auto">
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {/* Projects Card */}
             <Link
               href="/projects"
@@ -187,10 +187,29 @@ export default function LandingPage() {
               </span>
             </Link>
 
+            {/* Notes Card */}
+            <Link
+              href="/notes"
+              className="group p-6 sm:p-8 bg-background rounded-lg border-2 border-accent-blue/20 hover:border-accent-blue/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] flex flex-col"
+            >
+              <div className="w-12 h-12 bg-accent-blue/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent-blue/20 group-hover:scale-110 transition-all duration-300">
+                <span className="text-2xl">📚</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-3">
+                Notes
+              </h3>
+              <p className="text-sm sm:text-base text-text-secondary leading-relaxed mb-4 flex-grow">
+                Master&apos;s programme notes, study materials, and lecture summaries.
+              </p>
+              <span className="text-accent-blue font-semibold group-hover:translate-x-2 inline-block transition-transform duration-300">
+                Browse notes →
+              </span>
+            </Link>
+
             {/* About Card */}
             <Link
               href="/about"
-              className="group p-6 sm:p-8 bg-background rounded-lg border-2 border-accent-orange/20 hover:border-accent-orange/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] flex flex-col sm:col-span-2 md:col-span-1"
+              className="group p-6 sm:p-8 bg-background rounded-lg border-2 border-accent-orange/20 hover:border-accent-orange/50 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] flex flex-col"
             >
               <div className="w-12 h-12 bg-accent-orange/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent-orange/20 group-hover:scale-110 transition-all duration-300">
                 <span className="text-2xl">👨‍💻</span>
