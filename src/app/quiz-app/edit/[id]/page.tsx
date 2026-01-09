@@ -1,0 +1,264 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useQuizzes } from '@/lib/useQuizzes';
+import {
+  QuestionType,
+  MultipleChoiceFormData,
+  ShortAnswerFormData,
+} from '@/lib/quizTypes';
+import QuestionForm from '../../components/QuestionForm';
+import QuestionItem from '../../components/QuestionItem';
+
+export default function EditQuizPage() {
+  const router = useRouter();
+  const params = useParams();
+  const quizId = params.id as string;
+
+  const {
+    getQuiz,
+    updateQuiz,
+    addMultipleChoiceQuestion,
+    addShortAnswerQuestion,
+    updateQuestion,
+    deleteQuestion,
+    reorderQuestions,
+  } = useQuizzes();
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [addingQuestionType, setAddingQuestionType] = useState<QuestionType | null>(null);
+  const [isEditingMetadata, setIsEditingMetadata] = useState(false);
+
+  const quiz = getQuiz(quizId);
+
+  useEffect(() => {
+    if (quiz) {
+      setTitle(quiz.title);
+      setDescription(quiz.description || '');
+    }
+  }, [quiz]);
+
+  if (!quiz) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold text-secondary mb-8">Quiz Not Found</h1>
+          <button
+            onClick={() => router.push('/quiz-app')}
+            className="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90"
+          >
+            Back to Quizzes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleUpdateMetadata = () => {
+    if (!title.trim()) {
+      alert('Please enter a quiz title');
+      return;
+    }
+    updateQuiz(quizId, {
+      title: title.trim(),
+      description: description.trim() || undefined,
+    });
+    setIsEditingMetadata(false);
+  };
+
+  const handleAddQuestion = (data: MultipleChoiceFormData | ShortAnswerFormData) => {
+    if (addingQuestionType === 'multiplechoice' && 'correct' in data && 'incorrect' in data) {
+      addMultipleChoiceQuestion(quizId, data.question, data.correct, data.incorrect);
+    } else if (addingQuestionType === 'shortanswer' && 'answer' in data) {
+      addShortAnswerQuestion(quizId, data.question, data.answer);
+    }
+    setAddingQuestionType(null);
+  };
+
+  const handleUpdateQuestion = (questionId: string, type: QuestionType, data: MultipleChoiceFormData | ShortAnswerFormData) => {
+    if (type === 'multiplechoice' && 'correct' in data && 'incorrect' in data) {
+      updateQuestion(quizId, questionId, type, {
+        question: data.question,
+        choices: {
+          correct: data.correct,
+          incorrect: data.incorrect,
+        },
+      });
+    } else if (type === 'shortanswer' && 'answer' in data) {
+      updateQuestion(quizId, questionId, type, {
+        question: data.question,
+        answer: data.answer,
+      });
+    }
+  };
+
+  const handleDeleteQuestion = (questionId: string, type: QuestionType) => {
+    deleteQuestion(quizId, questionId, type);
+  };
+
+  const handleReorder = (questionId: string, type: QuestionType, direction: 'up' | 'down') => {
+    reorderQuestions(quizId, type, questionId, direction);
+  };
+
+  return (
+    <div className="min-h-screen bg-background py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-bold text-secondary mb-8">Edit Quiz</h1>
+
+        {/* Quiz Metadata */}
+        <div className="mb-6 p-6 bg-paper rounded-lg border-2 border-primary/20">
+          {isEditingMetadata ? (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Quiz Title *</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none"
+                  placeholder="Enter quiz title..."
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Description (optional)</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none"
+                  rows={3}
+                  placeholder="Enter quiz description..."
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleUpdateMetadata}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setTitle(quiz.title);
+                    setDescription(quiz.description || '');
+                    setIsEditingMetadata(false);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary">{quiz.title}</h2>
+                  {quiz.description && (
+                    <p className="text-text-secondary mt-2">{quiz.description}</p>
+                  )}
+                  <p className="text-sm text-text-secondary mt-2">
+                    Total questions: {quiz.questions.multiplechoice.length + quiz.questions.shortanswer.length}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsEditingMetadata(true)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Edit Info
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Add Question Section */}
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Add a Question:</h3>
+
+          {!addingQuestionType ? (
+            <div className="flex gap-4">
+              <button
+                onClick={() => setAddingQuestionType('multiplechoice')}
+                className="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90"
+              >
+                Multiple Choice
+              </button>
+              <button
+                onClick={() => setAddingQuestionType('shortanswer')}
+                className="px-6 py-3 bg-accent-orange text-white font-semibold rounded-lg hover:bg-accent-orange/90"
+              >
+                Short Answer
+              </button>
+            </div>
+          ) : (
+            <QuestionForm
+              type={addingQuestionType}
+              onSave={handleAddQuestion}
+              onCancel={() => setAddingQuestionType(null)}
+            />
+          )}
+        </div>
+
+        {/* Multiple Choice Questions */}
+        {quiz.questions.multiplechoice.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold text-primary mb-4">
+              Multiple Choice Questions ({quiz.questions.multiplechoice.length})
+            </h3>
+            {quiz.questions.multiplechoice
+              .sort((a, b) => a.order - b.order)
+              .map((q, index) => (
+                <QuestionItem
+                  key={q.id}
+                  question={q}
+                  type="multiplechoice"
+                  index={index}
+                  total={quiz.questions.multiplechoice.length}
+                  onUpdate={(data) => handleUpdateQuestion(q.id, 'multiplechoice', data)}
+                  onDelete={() => handleDeleteQuestion(q.id, 'multiplechoice')}
+                  onMoveUp={() => handleReorder(q.id, 'multiplechoice', 'up')}
+                  onMoveDown={() => handleReorder(q.id, 'multiplechoice', 'down')}
+                />
+              ))}
+          </div>
+        )}
+
+        {/* Short Answer Questions */}
+        {quiz.questions.shortanswer.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold text-primary mb-4">
+              Short Answer Questions ({quiz.questions.shortanswer.length})
+            </h3>
+            {quiz.questions.shortanswer
+              .sort((a, b) => a.order - b.order)
+              .map((q, index) => (
+                <QuestionItem
+                  key={q.id}
+                  question={q}
+                  type="shortanswer"
+                  index={index}
+                  total={quiz.questions.shortanswer.length}
+                  onUpdate={(data) => handleUpdateQuestion(q.id, 'shortanswer', data)}
+                  onDelete={() => handleDeleteQuestion(q.id, 'shortanswer')}
+                  onMoveUp={() => handleReorder(q.id, 'shortanswer', 'up')}
+                  onMoveDown={() => handleReorder(q.id, 'shortanswer', 'down')}
+                />
+              ))}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-4">
+          <button
+            onClick={() => router.push('/quiz-app')}
+            className="px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90"
+          >
+            Done Editing
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
