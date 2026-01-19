@@ -283,17 +283,25 @@ const AboutPage = (): React.JSX.Element => {
                             <span className="text-2xl">✨</span>
                             Beyond Code
                         </h2>
-                        <div className="p-6 sm:p-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg border-2 border-primary/10">
-                            <p className="text-base sm:text-lg text-text-secondary leading-relaxed mb-4">
-                                [Share your interests outside of programming - hobbies, sports,
-                                creative pursuits, volunteer work, etc.]
-                            </p>
-                            <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
-                                [Additional paragraph about what you do for fun, learning
-                                interests, travel, or other personal aspects you&apos;d like to
-                                share]
-                            </p>
-                        </div>
+                        <Link
+                            href="/about/neurodivergence"
+                            className="block p-6 sm:p-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+                        >
+                            <div className="flex items-start gap-4">
+                                <span className="text-4xl">🧠</span>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
+                                        Neurodivergence
+                                    </h3>
+                                    <p className="text-base text-text-secondary leading-relaxed">
+                                        Understanding neurodiversity and my personal journey
+                                        <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform duration-300">
+                                            →
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </Link>
                     </div>
 
                     {/* CTA Section */}
