@@ -53,6 +53,16 @@ export interface QuizAttempt {
 
 export type QuestionType = 'multiplechoice' | 'shortanswer';
 
+// Template data as stored on disk (no id or createdAt)
+export interface QuizTemplateData {
+  title: string;
+  description?: string;
+  questions: {
+    multiplechoice: Array<{ question: string; choices: { correct: string; incorrect: string[] } }>;
+    shortanswer: Array<{ question: string; answer: string }>;
+  };
+}
+
 // Form data types for creating/editing questions
 export interface MultipleChoiceFormData {
   question: string;

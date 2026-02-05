@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Quiz, MultipleChoiceQuestion, ShortAnswerQuestion } from './quizTypes';
+import { Quiz, MultipleChoiceQuestion, ShortAnswerQuestion, QuizTemplateData } from './quizTypes';
 
 const STORAGE_KEY = 'quizzes';
 
@@ -64,8 +64,8 @@ export function useQuizzes() {
     setQuizzes(prev => prev.filter(q => q.id !== id));
   };
 
-  // Import quiz from JSON
-  const importQuiz = (quizData: Partial<Quiz>): Quiz => {
+  // Import quiz from JSON or template
+  const importQuiz = (quizData: QuizTemplateData): Quiz => {
     const newQuiz: Quiz = {
       id: `quiz-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: quizData.title || 'Untitled Quiz',

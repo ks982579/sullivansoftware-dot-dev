@@ -1,0 +1,51 @@
+{
+  "title": "Networks Quiz",
+  "description": "Networking concepts and protocols",
+  "questions": {
+    "multiplechoice": [
+      {
+        "question": "Which OSI layer is responsible for end-to-end communication and error detection?",
+        "choices": {
+          "correct": "Transport Layer (Layer 4)",
+          "incorrect": [
+            "Network Layer (Layer 3)",
+            "Data Link Layer (Layer 2)",
+            "Session Layer (Layer 5)"
+          ]
+        }
+      },
+      {
+        "question": "What does DHCP stand for?",
+        "choices": {
+          "correct": "Dynamic Host Configuration Protocol",
+          "incorrect": [
+            "Dynamic Host Control Protocol",
+            "Distributed Host Configuration Protocol",
+            "Data Host Configuration Protocol"
+          ]
+        }
+      },
+      {
+        "question": "Which subnet mask corresponds to /24 CIDR notation?",
+        "choices": {
+          "correct": "255.255.255.0",
+          "incorrect": [
+            "255.255.0.0",
+            "255.255.255.128",
+            "255.0.0.0"
+          ]
+        }
+      }
+    ],
+    "shortanswer": [
+      {
+        "question": "What is the default port number for HTTPS?",
+        "answer": "443"
+      },
+      {
+        "question": "Name the protocol used to translate domain names into IP addresses.",
+        "answer": "DNS (Domain Name System)"
+      }
+    ]
+  }
+}

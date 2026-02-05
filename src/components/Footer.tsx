@@ -60,6 +60,14 @@ export default function Footer() {
                   Todo
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/quiz-app"
+                  className="text-white/70 hover:text-white transition-colors duration-200"
+                >
+                  Quiz App
+                </Link>
+              </li>
             </ul>
           </div>
 
