@@ -27,6 +27,7 @@ export default function TakeQuizPage() {
   const [userAnswers, setUserAnswers] = useState<{ [questionId: string]: string }>({});
   const [timeSpent, setTimeSpent] = useState(0);
   const [results, setResults] = useState<QuizAnswer[]>([]);
+  const [shortAnswerGrades, setShortAnswerGrades] = useState<{ [questionId: string]: 0 | 1 | 2 }>({});
 
   if (!quiz) {
     return (
@@ -140,6 +141,13 @@ export default function TakeQuizPage() {
     setQuizCompleted(true);
   };
 
+  const handleGradeShortAnswer = (questionId: string, grade: 0 | 1 | 2) => {
+    setShortAnswerGrades((prev) => ({
+      ...prev,
+      [questionId]: grade,
+    }));
+  };
+
   // Helper function to shuffle array
   function shuffleArray<T>(array: T[]): T[] {
     const shuffled = [...array];
@@ -170,6 +178,18 @@ export default function TakeQuizPage() {
     const correctCount = mcResults.filter((r) => r.isCorrect).length;
     const totalMc = mcResults.length;
 
+    // Calculate short answer score
+    const totalSaPoints = saResults.length * 2;
+    const earnedSaPoints = saResults.reduce((sum, result) => {
+      const grade = shortAnswerGrades[result.questionId];
+      return sum + (grade !== undefined ? grade : 0);
+    }, 0);
+    const gradedSaCount = Object.keys(shortAnswerGrades).length;
+
+    // Calculate final grade
+    const totalPoints = totalMc + totalSaPoints;
+    const earnedPoints = correctCount + earnedSaPoints;
+
     return (
       <div className="min-h-screen bg-background py-12 px-4">
         <div className="max-w-4xl mx-auto">
@@ -178,13 +198,26 @@ export default function TakeQuizPage() {
             <p className="text-lg">
               <strong>Time:</strong> {Math.floor(timeSpent / 60)}:{(timeSpent % 60).toString().padStart(2, '0')}
             </p>
-            <p className="text-lg">
-              <strong>Multiple Choice Score:</strong> {correctCount} / {totalMc} (
-              {totalMc > 0 ? ((correctCount / totalMc) * 100).toFixed(1) : 0}%)
-            </p>
-            <p className="text-sm text-text-secondary mt-2">
-              Short answer questions require manual review.
-            </p>
+            {totalMc > 0 && (
+              <p className="text-lg">
+                <strong>Multiple Choice Score:</strong> {correctCount} / {totalMc} (
+                {((correctCount / totalMc) * 100).toFixed(1)}%)
+              </p>
+            )}
+            {saResults.length > 0 && (
+              <p className="text-lg">
+                <strong>Short Answer Score:</strong>{' '}
+                {gradedSaCount === 0
+                  ? 'Not Graded'
+                  : `${earnedSaPoints} / ${totalSaPoints} (${((earnedSaPoints / totalSaPoints) * 100).toFixed(1)}%)`}
+              </p>
+            )}
+            {totalPoints > 0 && (
+              <p className="text-lg font-semibold mt-3 pt-3 border-t-2 border-primary/20">
+                <strong>Final Grade:</strong> {earnedPoints} / {totalPoints} (
+                {((earnedPoints / totalPoints) * 100).toFixed(1)}%)
+              </p>
+            )}
           </div>
 
           {/* Multiple Choice Results */}
@@ -235,28 +268,67 @@ export default function TakeQuizPage() {
           {saResults.length > 0 && (
             <div className="mb-8">
               <h2 className="text-2xl font-semibold text-primary mb-4">Short Answer</h2>
-              {saResults.map((result, index) => (
-                <div
-                  key={result.questionId}
-                  className="mb-4 p-4 bg-paper rounded-lg border-2 border-primary/20"
-                >
-                  <p className="font-semibold mb-3">
-                    {index + 1}. {result.question}
-                  </p>
-                  <div className="mb-2">
-                    <p className="text-sm font-medium text-gray-600">Your Answer:</p>
-                    <p className="p-2 bg-gray-100 rounded">
-                      {result.userAnswer || '(No answer provided)'}
-                    </p>
+              {saResults.map((result, index) => {
+                const currentGrade = shortAnswerGrades[result.questionId];
+                return (
+                  <div
+                    key={result.questionId}
+                    className="mb-4 p-4 bg-paper rounded-lg border-2 border-primary/20"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold mb-3">
+                          {index + 1}. {result.question}
+                        </p>
+                        <div className="mb-2">
+                          <p className="text-sm font-medium text-gray-600">Your Answer:</p>
+                          <p className="p-2 bg-gray-100 rounded">
+                            {result.userAnswer || '(No answer provided)'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-700">Correct Answer:</p>
+                          <p className="p-2 bg-green-50 rounded border border-green-200">
+                            {result.correctAnswer}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 ml-4">
+                        <button
+                          onClick={() => handleGradeShortAnswer(result.questionId, 2)}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                            currentGrade === 2
+                              ? 'bg-green-600 text-white shadow-md'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          Correct
+                        </button>
+                        <button
+                          onClick={() => handleGradeShortAnswer(result.questionId, 1)}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                            currentGrade === 1
+                              ? 'bg-yellow-600 text-white shadow-md'
+                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                          }`}
+                        >
+                          Partial
+                        </button>
+                        <button
+                          onClick={() => handleGradeShortAnswer(result.questionId, 0)}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                            currentGrade === 0
+                              ? 'bg-red-600 text-white shadow-md'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                        >
+                          Incorrect
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-green-700">Correct Answer:</p>
-                    <p className="p-2 bg-green-50 rounded border border-green-200">
-                      {result.correctAnswer}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -273,6 +345,7 @@ export default function TakeQuizPage() {
                 setShowOptions(true);
                 setUserAnswers({});
                 setTimeSpent(0);
+                setShortAnswerGrades({});
               }}
               className="px-6 py-3 bg-accent-orange text-white font-semibold rounded-lg hover:bg-accent-orange/90"
             >

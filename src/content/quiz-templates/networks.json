@@ -1,9 +1,11 @@
 {
+  "id": "quiz-1770360858329-2e7ncgvlh",
   "title": "Networks Quiz",
   "description": "Networking concepts and protocols",
   "questions": {
     "multiplechoice": [
       {
+        "id": "mc-1770360858329-0",
         "question": "Which OSI layer is responsible for end-to-end communication and error detection?",
         "choices": {
           "correct": "Transport Layer (Layer 4)",
@@ -12,9 +14,11 @@
             "Data Link Layer (Layer 2)",
             "Session Layer (Layer 5)"
           ]
-        }
+        },
+        "order": 0
       },
       {
+        "id": "mc-1770360858329-1",
         "question": "What does DHCP stand for?",
         "choices": {
           "correct": "Dynamic Host Configuration Protocol",
@@ -23,9 +27,11 @@
             "Distributed Host Configuration Protocol",
             "Data Host Configuration Protocol"
           ]
-        }
+        },
+        "order": 1
       },
       {
+        "id": "mc-1770360858329-2",
         "question": "Which subnet mask corresponds to /24 CIDR notation?",
         "choices": {
           "correct": "255.255.255.0",
@@ -34,18 +40,193 @@
             "255.255.255.128",
             "255.0.0.0"
           ]
-        }
+        },
+        "order": 2
+      },
+      {
+        "id": "mc-1770365685678-l8mbg0hpq",
+        "question": "Which of the following is not a key component of digital data transmission?",
+        "choices": {
+          "correct": "Cryptography",
+          "incorrect": [
+            "Protocols",
+            "Message",
+            "Link"
+          ]
+        },
+        "order": 3
+      },
+      {
+        "id": "mc-1770365730975-vu78u1i7t",
+        "question": "In terms of spatial coverage area, which network is the largest?",
+        "choices": {
+          "correct": "WAN",
+          "incorrect": [
+            "BAN",
+            "MAN",
+            "PAN"
+          ]
+        },
+        "order": 4
+      },
+      {
+        "id": "mc-1770365829616-sbrvzar3k",
+        "question": "If the signal to noise ratio is 1, and bandwidth is B, then what is the value of the capacity C? (Hint: Shannon-Hartley theorem)",
+        "choices": {
+          "correct": "1B",
+          "incorrect": [
+            "0.5B",
+            "4B",
+            "2B"
+          ]
+        },
+        "order": 5
+      },
+      {
+        "id": "mc-1770365963802-7cnw39nsi",
+        "question": "What is the frequency range of a microwave?",
+        "choices": {
+          "correct": "1 GHz to 300 GHz",
+          "incorrect": [
+            "1 MHz - 300 MHz",
+            "100 MHz - 300 MHz",
+            "100 GHz - 500 GHz"
+          ]
+        },
+        "order": 6
+      },
+      {
+        "id": "mc-1770366113410-ajk2jxhs8",
+        "question": "If the packet size is 8kb and the data transmission rate is 8Mbps, what is the transmission delay? (Hint: Transmission Delay = L/R)",
+        "choices": {
+          "correct": "1ms",
+          "incorrect": [
+            "1s",
+            "0.1ms",
+            "0.01ms",
+            "0.001ms"
+          ]
+        },
+        "order": 7
+      },
+      {
+        "id": "mc-1770366238362-x52b1vjkc",
+        "question": "What is a \"link\" in terms of digital data transmission or data communication?",
+        "choices": {
+          "correct": "The physical medium of communication",
+          "incorrect": [
+            "The wired logical medium",
+            "The logical medium between sender and receiver",
+            "The wireless logical medium"
+          ]
+        },
+        "order": 8
+      },
+      {
+        "id": "mc-1770366268269-6qdl01o4e",
+        "question": "Which of the following protocols does not belong to network layer?",
+        "choices": {
+          "correct": "RTP",
+          "incorrect": [
+            "ICMP",
+            "DHCP",
+            "ARP"
+          ]
+        },
+        "order": 9
+      },
+      {
+        "id": "mc-1770366316304-pfr12etx5",
+        "question": "Which of the following statements is incorrect about the transport layer of TCP/IP protocol stack?",
+        "choices": {
+          "correct": "The transport layer address is known as socket.",
+          "incorrect": [
+            "Like the application layer the transport layer is only available on the connecting nodes.",
+            "The transport layer receives the message from application layer and break into equal size smaller pieces.",
+            "The transport layer data unit is known as segment."
+          ]
+        },
+        "order": 10
+      },
+      {
+        "id": "mc-1770366351221-or85rjdgy",
+        "question": "Which statement is false about BitTorrent?",
+        "choices": {
+          "correct": "It is a SOA based client-server architecture.",
+          "incorrect": [
+            "It is a SOA based client-server architecture.",
+            "A peer of the P2P network tracks all active peers known as tracker.",
+            "It is a file distribution protocol."
+          ]
+        },
+        "order": 11
+      },
+      {
+        "id": "mc-1770367243303-k7qp9p7oh",
+        "question": "By replication transparency it implies …",
+        "choices": {
+          "correct": "the user needs to update only one data to update all of them.",
+          "incorrect": [
+            "either all the transactions occur on a data on various nodes or none of them occur.",
+            "multiple transactions may occur on a distributed data by a single or multiple process concurrently.",
+            "multiple users or processes can access the data from various locations and nodes simultaneously."
+          ]
+        },
+        "order": 12
+      },
+      {
+        "id": "mc-1770367278281-pr0m5jqc3",
+        "question": "Messenger applications are based on …",
+        "choices": {
+          "correct": "hybrid architecture.",
+          "incorrect": [
+            "centralized architecture.",
+            "P2P architecture.",
+            "client-server architecture."
+          ]
+        },
+        "order": 13
+      },
+      {
+        "id": "mc-1770367304632-am0eabl4s",
+        "question": "Which of the following is not a benefit of MOM?",
+        "choices": {
+          "correct": "Tame heterogeneity of hardware and software",
+          "incorrect": [
+            "Providing common services",
+            "Encapsulating heterogeneity of hardware and operating systems",
+            "Providing uniform interfaces"
+          ]
+        },
+        "order": 14
       }
     ],
     "shortanswer": [
       {
+        "id": "sa-1770360858329-0",
         "question": "What is the default port number for HTTPS?",
-        "answer": "443"
+        "answer": "443",
+        "order": 0
       },
       {
+        "id": "sa-1770360858329-1",
         "question": "Name the protocol used to translate domain names into IP addresses.",
-        "answer": "DNS (Domain Name System)"
+        "answer": "DNS (Domain Name System)",
+        "order": 1
+      },
+      {
+        "id": "sa-1770367358356-dn1swjtie",
+        "question": "Name three types of cloud services and give an explanation for each.",
+        "answer": "Software as a Service (SaaS): means end user applications. These applications are deployed and maintained by the service provider. The end user does not need to worry about the infrastructure, platform or underlying maintenance of the applications or software service. End user simply consumes the specific ready product i.e., software he is interested in. Pr Platform as a Service (PaaS): provides remote access to the desired platforms such as operating systems or hardware. It allows the user to install applications on the preferred platform. Infrastructure as a Service (IaaS): provides the most flexible cloud services. It provides basic networking facilities, hardware virtualization, and storage services.",
+        "order": 2
+      },
+      {
+        "id": "sa-1770367592385-lc0ye5o9e",
+        "question": "a. What is pervasive computing? Provide an example of pervasive computing. If so, how do pervasive and ubiquitous computing differ?\nb. Name five key properties of pervasive computing and explain each of them.",
+        "answer": "a. Pervasive computing aims to make computing available from any geographical location and electronic devices, at any time. End nodes of a pervasive computing is not only desktop or laptop computers but also it includes cellphone devices, sensors, actuators, home appliances, wearable devices etc. An emerging application of pervasive computing is internet of things (IoT). Pervasive computing is also referred to as ubiquitous computing. b. Context aware network nodes have to be context aware in order to optimize performance. Distributed the system should be deployed over a distributed network. Autonomous network nodes should be self-governed, should be able to operate without human intervention. HCI human-computer interactions (HCI) should be minimized and hidden. Intelligent the network nodes should be intelligent i.e., artificial intelligence should be integrated.",
+        "order": 3
       }
     ]
-  }
+  },
+  "createdAt": 1770360858329
 }

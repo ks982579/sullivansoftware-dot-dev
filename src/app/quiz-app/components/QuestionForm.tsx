@@ -158,11 +158,11 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
       ) : (
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Correct Answer</label>
-          <input
-            type="text"
+          <textarea
             value={correct}
             onChange={(e) => setCorrect(e.target.value)}
             className="w-full p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none"
+            rows={4}
             placeholder="Enter the correct answer..."
             required
           />
