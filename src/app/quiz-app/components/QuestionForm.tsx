@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react';
 import {
   MultipleChoiceQuestion,
   ShortAnswerQuestion,
+  LongAnswerQuestion,
   QuestionType,
   MultipleChoiceFormData,
   ShortAnswerFormData,
+  LongAnswerFormData,
 } from '@/lib/quizTypes';
 
 interface QuestionFormProps {
   type: QuestionType;
-  existingQuestion?: MultipleChoiceQuestion | ShortAnswerQuestion;
-  onSave: (data: MultipleChoiceFormData | ShortAnswerFormData) => void;
+  existingQuestion?: MultipleChoiceQuestion | ShortAnswerQuestion | LongAnswerQuestion;
+  onSave: (data: MultipleChoiceFormData | ShortAnswerFormData | LongAnswerFormData) => void;
   onCancel: () => void;
 }
 
@@ -20,6 +22,7 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
   const [question, setQuestion] = useState('');
   const [correct, setCorrect] = useState('');
   const [incorrectOptions, setIncorrectOptions] = useState<string[]>(['', '']);
+  const [totalPoints, setTotalPoints] = useState(10);
 
   useEffect(() => {
     if (existingQuestion) {
@@ -31,6 +34,9 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
           : ['', '']);
       } else if (type === 'shortanswer' && 'answer' in existingQuestion) {
         setCorrect(existingQuestion.answer);
+      } else if (type === 'longanswer' && 'answer' in existingQuestion && 'totalPoints' in existingQuestion) {
+        setCorrect(existingQuestion.answer);
+        setTotalPoints(existingQuestion.totalPoints);
       }
     }
   }, [existingQuestion, type]);
@@ -75,10 +81,20 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
         correct: correct.trim(),
         incorrect: validIncorrect.map(opt => opt.trim()),
       });
-    } else {
+    } else if (type === 'shortanswer') {
       onSave({
         question: question.trim(),
-        answer: correct.trim(),
+        answer: correct,
+      });
+    } else {
+      if (totalPoints < 1) {
+        alert('Total points must be at least 1');
+        return;
+      }
+      onSave({
+        question: question.trim(),
+        answer: correct,
+        totalPoints,
       });
     }
 
@@ -86,12 +102,13 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
     setQuestion('');
     setCorrect('');
     setIncorrectOptions(['', '']);
+    setTotalPoints(10);
   };
 
   return (
     <form onSubmit={handleSubmit} className="p-6 bg-paper rounded-lg border-2 border-primary/30 mb-4">
       <h3 className="text-lg font-semibold text-secondary mb-4">
-        {existingQuestion ? 'Edit' : 'Add'} {type === 'multiplechoice' ? 'Multiple Choice' : 'Short Answer'} Question
+        {existingQuestion ? 'Edit' : 'Add'} {type === 'multiplechoice' ? 'Multiple Choice' : type === 'shortanswer' ? 'Short Answer' : 'Long Answer'} Question
       </h3>
 
       <div className="mb-4">
@@ -112,11 +129,11 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
             <label className="block text-sm font-medium mb-2 text-green-700">
               Correct Answer
             </label>
-            <input
-              type="text"
+            <textarea
               value={correct}
               onChange={(e) => setCorrect(e.target.value)}
-              className="w-full p-3 border-2 border-green-300 rounded-lg focus:border-green-500 focus:outline-none"
+              className="w-full p-3 border-2 border-green-300 rounded-lg focus:border-green-500 focus:outline-none whitespace-pre-wrap"
+              rows={2}
               placeholder="Enter the correct answer..."
               required
             />
@@ -128,11 +145,11 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
             </label>
             {incorrectOptions.map((option, index) => (
               <div key={index} className="flex gap-2 mb-2">
-                <input
-                  type="text"
+                <textarea
                   value={option}
                   onChange={(e) => handleIncorrectChange(index, e.target.value)}
-                  className="flex-1 p-3 border-2 border-red-200 rounded-lg focus:border-red-400 focus:outline-none"
+                  className="flex-1 p-3 border-2 border-red-200 rounded-lg focus:border-red-400 focus:outline-none whitespace-pre-wrap"
+                  rows={2}
                   placeholder={`Incorrect option ${index + 1}...`}
                 />
                 {incorrectOptions.length > 2 && (
@@ -155,18 +172,43 @@ export default function QuestionForm({ type, existingQuestion, onSave, onCancel 
             </button>
           </div>
         </>
-      ) : (
+      ) : type === 'shortanswer' ? (
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Correct Answer</label>
           <textarea
             value={correct}
             onChange={(e) => setCorrect(e.target.value)}
-            className="w-full p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none"
+            className="w-full p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none whitespace-pre-wrap"
             rows={4}
             placeholder="Enter the correct answer..."
             required
           />
         </div>
+      ) : (
+        <>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">Correct Answer</label>
+            <textarea
+              value={correct}
+              onChange={(e) => setCorrect(e.target.value)}
+              className="w-full p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none whitespace-pre-wrap"
+              rows={6}
+              placeholder="Enter the correct answer..."
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">Total Points</label>
+            <input
+              type="number"
+              min="1"
+              value={totalPoints}
+              onChange={(e) => setTotalPoints(parseInt(e.target.value) || 1)}
+              className="w-32 p-3 border-2 border-primary/20 rounded-lg focus:border-primary focus:outline-none"
+              required
+            />
+          </div>
+        </>
       )}
 
       <div className="flex gap-2">

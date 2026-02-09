@@ -37,6 +37,7 @@ export default function QuizAppClient({ templates }: QuizAppClientProps) {
       // Validate question structure
       const mc = parsed.questions.multiplechoice || [];
       const sa = parsed.questions.shortanswer || [];
+      const la = parsed.questions.longanswer || [];
 
       for (const q of mc) {
         if (!q.question || !q.choices?.correct || !Array.isArray(q.choices?.incorrect)) {
@@ -48,6 +49,13 @@ export default function QuizAppClient({ templates }: QuizAppClientProps) {
       for (const q of sa) {
         if (!q.question || !q.answer) {
           setJsonError('Invalid short answer question format');
+          return;
+        }
+      }
+
+      for (const q of la) {
+        if (!q.question || !q.answer || typeof q.totalPoints !== 'number') {
+          setJsonError('Invalid long answer question format');
           return;
         }
       }
@@ -158,6 +166,13 @@ export default function QuizAppClient({ templates }: QuizAppClientProps) {
         "question": "Question text",
         "answer": "Correct answer"
       }
+    ],
+    "longanswer": [
+      {
+        "question": "Question text",
+        "answer": "Correct answer",
+        "totalPoints": 10
+      }
     ]
   }
 }`}
@@ -208,7 +223,8 @@ export default function QuizAppClient({ templates }: QuizAppClientProps) {
               {quizzes.map((quiz) => {
                 const totalQuestions =
                   quiz.questions.multiplechoice.length +
-                  quiz.questions.shortanswer.length;
+                  quiz.questions.shortanswer.length +
+                  quiz.questions.longanswer.length;
 
                 return (
                   <div

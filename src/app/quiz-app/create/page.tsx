@@ -7,9 +7,11 @@ import {
   QuestionType,
   MultipleChoiceFormData,
   ShortAnswerFormData,
+  LongAnswerFormData,
 } from '@/lib/quizTypes';
 import QuestionForm from '../components/QuestionForm';
 import QuestionItem from '../components/QuestionItem';
+import QuestionImportModal from '../components/QuestionImportModal';
 
 export default function CreateQuizPage() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function CreateQuizPage() {
     createQuiz,
     addMultipleChoiceQuestion,
     addShortAnswerQuestion,
+    addLongAnswerQuestion,
     updateQuestion,
     deleteQuestion,
     reorderQuestions,
@@ -27,6 +30,7 @@ export default function CreateQuizPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [addingQuestionType, setAddingQuestionType] = useState<QuestionType | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const quiz = currentQuizId ? getQuiz(currentQuizId) : null;
 
@@ -39,19 +43,21 @@ export default function CreateQuizPage() {
     setCurrentQuizId(newQuiz.id);
   };
 
-  const handleAddQuestion = (data: MultipleChoiceFormData | ShortAnswerFormData) => {
+  const handleAddQuestion = (data: MultipleChoiceFormData | ShortAnswerFormData | LongAnswerFormData) => {
     if (!currentQuizId) return;
 
     if (addingQuestionType === 'multiplechoice' && 'correct' in data && 'incorrect' in data) {
       addMultipleChoiceQuestion(currentQuizId, data.question, data.correct, data.incorrect);
-    } else if (addingQuestionType === 'shortanswer' && 'answer' in data) {
+    } else if (addingQuestionType === 'shortanswer' && 'answer' in data && !('totalPoints' in data)) {
       addShortAnswerQuestion(currentQuizId, data.question, data.answer);
+    } else if (addingQuestionType === 'longanswer' && 'answer' in data && 'totalPoints' in data) {
+      addLongAnswerQuestion(currentQuizId, data.question, data.answer, data.totalPoints);
     }
 
     setAddingQuestionType(null);
   };
 
-  const handleUpdateQuestion = (questionId: string, type: QuestionType, data: MultipleChoiceFormData | ShortAnswerFormData) => {
+  const handleUpdateQuestion = (questionId: string, type: QuestionType, data: MultipleChoiceFormData | ShortAnswerFormData | LongAnswerFormData) => {
     if (!currentQuizId) return;
 
     if (type === 'multiplechoice' && 'correct' in data && 'incorrect' in data) {
@@ -62,10 +68,16 @@ export default function CreateQuizPage() {
           incorrect: data.incorrect,
         },
       });
-    } else if (type === 'shortanswer' && 'answer' in data) {
+    } else if (type === 'shortanswer' && 'answer' in data && !('totalPoints' in data)) {
       updateQuestion(currentQuizId, questionId, type, {
         question: data.question,
         answer: data.answer,
+      });
+    } else if (type === 'longanswer' && 'answer' in data && 'totalPoints' in data) {
+      updateQuestion(currentQuizId, questionId, type, {
+        question: data.question,
+        answer: data.answer,
+        totalPoints: data.totalPoints,
       });
     }
   };
@@ -80,10 +92,47 @@ export default function CreateQuizPage() {
     reorderQuestions(currentQuizId, type, questionId, direction);
   };
 
+  const handleImportQuestions = (data: {
+    multiplechoice?: Array<{ question: string; choices: { correct: string; incorrect: string[] } }>;
+    shortanswer?: Array<{ question: string; answer: string }>;
+    longanswer?: Array<{ question: string; answer: string; totalPoints: number }>;
+  }) => {
+    if (!currentQuizId) return;
+
+    let importedCount = 0;
+
+    // Import multiple choice questions
+    if (data.multiplechoice) {
+      for (const q of data.multiplechoice) {
+        addMultipleChoiceQuestion(currentQuizId, q.question, q.choices.correct, q.choices.incorrect);
+        importedCount++;
+      }
+    }
+
+    // Import short answer questions
+    if (data.shortanswer) {
+      for (const q of data.shortanswer) {
+        addShortAnswerQuestion(currentQuizId, q.question, q.answer);
+        importedCount++;
+      }
+    }
+
+    // Import long answer questions
+    if (data.longanswer) {
+      for (const q of data.longanswer) {
+        addLongAnswerQuestion(currentQuizId, q.question, q.answer, q.totalPoints);
+        importedCount++;
+      }
+    }
+
+    setShowImportModal(false);
+    alert(`Successfully imported ${importedCount} question${importedCount !== 1 ? 's' : ''}!`);
+  };
+
   const handleFinish = () => {
     if (!quiz) return;
 
-    const totalQuestions = quiz.questions.multiplechoice.length + quiz.questions.shortanswer.length;
+    const totalQuestions = quiz.questions.multiplechoice.length + quiz.questions.shortanswer.length + quiz.questions.longanswer.length;
     if (totalQuestions === 0) {
       alert('Please add at least one question before finishing');
       return;
@@ -134,7 +183,7 @@ export default function CreateQuizPage() {
                 <p className="text-text-secondary mt-2">{quiz.description}</p>
               )}
               <p className="text-sm text-text-secondary mt-2">
-                Total questions: {(quiz?.questions.multiplechoice.length || 0) + (quiz?.questions.shortanswer.length || 0)}
+                Total questions: {(quiz?.questions.multiplechoice.length || 0) + (quiz?.questions.shortanswer.length || 0) + (quiz?.questions.longanswer.length || 0)}
               </p>
             </div>
 
@@ -143,20 +192,36 @@ export default function CreateQuizPage() {
               <h3 className="text-xl font-semibold text-primary mb-4">Add a Question:</h3>
 
               {!addingQuestionType ? (
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setAddingQuestionType('multiplechoice')}
-                    className="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90"
-                  >
-                    Multiple Choice
-                  </button>
-                  <button
-                    onClick={() => setAddingQuestionType('shortanswer')}
-                    className="px-6 py-3 bg-accent-orange text-white font-semibold rounded-lg hover:bg-accent-orange/90"
-                  >
-                    Short Answer
-                  </button>
-                </div>
+                <>
+                  <div className="flex gap-4 mb-4">
+                    <button
+                      onClick={() => setAddingQuestionType('multiplechoice')}
+                      className="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90"
+                    >
+                      Multiple Choice
+                    </button>
+                    <button
+                      onClick={() => setAddingQuestionType('shortanswer')}
+                      className="px-6 py-3 bg-accent-orange text-white font-semibold rounded-lg hover:bg-accent-orange/90"
+                    >
+                      Short Answer
+                    </button>
+                    <button
+                      onClick={() => setAddingQuestionType('longanswer')}
+                      className="px-6 py-3 bg-secondary text-white font-semibold rounded-lg hover:bg-secondary/90"
+                    >
+                      Long Answer
+                    </button>
+                  </div>
+                  <div className="pt-4 border-t border-primary/10">
+                    <button
+                      onClick={() => setShowImportModal(true)}
+                      className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
+                    >
+                      Import JSON
+                    </button>
+                  </div>
+                </>
               ) : (
                 <QuestionForm
                   type={addingQuestionType}
@@ -165,6 +230,14 @@ export default function CreateQuizPage() {
                 />
               )}
             </div>
+
+            {/* Import Modal */}
+            {showImportModal && (
+              <QuestionImportModal
+                onImport={handleImportQuestions}
+                onCancel={() => setShowImportModal(false)}
+              />
+            )}
 
             {/* Multiple Choice Questions */}
             {quiz && quiz.questions.multiplechoice.length > 0 && (
@@ -209,6 +282,30 @@ export default function CreateQuizPage() {
                       onDelete={() => handleDeleteQuestion(q.id, 'shortanswer')}
                       onMoveUp={() => handleReorder(q.id, 'shortanswer', 'up')}
                       onMoveDown={() => handleReorder(q.id, 'shortanswer', 'down')}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {/* Long Answer Questions */}
+            {quiz && quiz.questions.longanswer.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-primary mb-4">
+                  Long Answer Questions ({quiz.questions.longanswer.length})
+                </h3>
+                {quiz.questions.longanswer
+                  .sort((a, b) => a.order - b.order)
+                  .map((q, index) => (
+                    <QuestionItem
+                      key={q.id}
+                      question={q}
+                      type="longanswer"
+                      index={index}
+                      total={quiz.questions.longanswer.length}
+                      onUpdate={(data) => handleUpdateQuestion(q.id, 'longanswer', data)}
+                      onDelete={() => handleDeleteQuestion(q.id, 'longanswer')}
+                      onMoveUp={() => handleReorder(q.id, 'longanswer', 'up')}
+                      onMoveDown={() => handleReorder(q.id, 'longanswer', 'down')}
                     />
                   ))}
               </div>

@@ -4,18 +4,20 @@ import { useState } from 'react';
 import {
   MultipleChoiceQuestion,
   ShortAnswerQuestion,
+  LongAnswerQuestion,
   QuestionType,
   MultipleChoiceFormData,
   ShortAnswerFormData,
+  LongAnswerFormData,
 } from '@/lib/quizTypes';
 import QuestionForm from './QuestionForm';
 
 interface QuestionItemProps {
-  question: MultipleChoiceQuestion | ShortAnswerQuestion;
+  question: MultipleChoiceQuestion | ShortAnswerQuestion | LongAnswerQuestion;
   type: QuestionType;
   index: number;
   total: number;
-  onUpdate: (data: MultipleChoiceFormData | ShortAnswerFormData) => void;
+  onUpdate: (data: MultipleChoiceFormData | ShortAnswerFormData | LongAnswerFormData) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -56,7 +58,8 @@ export default function QuestionItem({
   }
 
   const isMultipleChoice = type === 'multiplechoice' && 'choices' in question;
-  const isShortAnswer = type === 'shortanswer' && 'answer' in question;
+  const isShortAnswer = type === 'shortanswer' && 'answer' in question && !('totalPoints' in question);
+  const isLongAnswer = type === 'longanswer' && 'answer' in question && 'totalPoints' in question;
 
   return (
     <div className="p-4 bg-paper rounded-lg border-2 border-primary/20 mb-3">
@@ -88,22 +91,29 @@ export default function QuestionItem({
               {index + 1}. {question.question}
             </p>
             <span className="text-xs px-2 py-1 bg-accent-orange/20 text-accent-orange rounded">
-              {type === 'multiplechoice' ? 'Multiple Choice' : 'Short Answer'}
+              {type === 'multiplechoice' ? 'Multiple Choice' : type === 'shortanswer' ? 'Short Answer' : 'Long Answer'}
             </span>
           </div>
 
           {isMultipleChoice && (
             <div className="mt-2 text-sm">
-              <p className="text-green-700 font-medium">✓ {question.choices.correct}</p>
+              <p className="text-green-700 font-medium whitespace-pre-wrap">✓ {question.choices.correct}</p>
               {question.choices.incorrect.map((option, idx) => (
-                <p key={idx} className="text-red-700">✗ {option}</p>
+                <p key={idx} className="text-red-700 whitespace-pre-wrap">✗ {option}</p>
               ))}
             </div>
           )}
 
           {isShortAnswer && (
             <div className="mt-2 text-sm">
-              <p className="text-green-700 font-medium">Answer: {question.answer}</p>
+              <p className="text-green-700 font-medium whitespace-pre-wrap">Answer: {question.answer}</p>
+            </div>
+          )}
+
+          {isLongAnswer && (
+            <div className="mt-2 text-sm">
+              <p className="text-green-700 font-medium whitespace-pre-wrap">Answer: {question.answer}</p>
+              <p className="text-primary font-medium mt-1">Total Points: {question.totalPoints}</p>
             </div>
           )}
 

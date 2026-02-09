@@ -17,6 +17,14 @@ export interface ShortAnswerQuestion {
   order: number;
 }
 
+export interface LongAnswerQuestion {
+  id: string;
+  question: string;
+  answer: string;
+  totalPoints: number;
+  order: number;
+}
+
 export interface Quiz {
   id: string;
   title: string;
@@ -24,18 +32,20 @@ export interface Quiz {
   questions: {
     multiplechoice: MultipleChoiceQuestion[];
     shortanswer: ShortAnswerQuestion[];
+    longanswer: LongAnswerQuestion[];
   };
   createdAt: number;
 }
 
 export interface QuizAnswer {
   questionId: string;
-  type: 'multiplechoice' | 'shortanswer';
+  type: 'multiplechoice' | 'shortanswer' | 'longanswer';
   question: string;
   userAnswer: string;
   correctAnswer: string;
-  isCorrect?: boolean; // undefined for short answer (manual grading)
+  isCorrect?: boolean; // undefined for short/long answer (manual grading)
   choices?: string[]; // for multiple choice, to remember what was shown
+  totalPoints?: number; // for long answer questions
 }
 
 export interface QuizAttempt {
@@ -51,7 +61,7 @@ export interface QuizAttempt {
   };
 }
 
-export type QuestionType = 'multiplechoice' | 'shortanswer';
+export type QuestionType = 'multiplechoice' | 'shortanswer' | 'longanswer';
 
 // Template data as stored on disk (no id or createdAt)
 export interface QuizTemplateData {
@@ -60,6 +70,7 @@ export interface QuizTemplateData {
   questions: {
     multiplechoice: Array<{ question: string; choices: { correct: string; incorrect: string[] } }>;
     shortanswer: Array<{ question: string; answer: string }>;
+    longanswer: Array<{ question: string; answer: string; totalPoints: number }>;
   };
 }
 
@@ -73,4 +84,10 @@ export interface MultipleChoiceFormData {
 export interface ShortAnswerFormData {
   question: string;
   answer: string;
+}
+
+export interface LongAnswerFormData {
+  question: string;
+  answer: string;
+  totalPoints: number;
 }

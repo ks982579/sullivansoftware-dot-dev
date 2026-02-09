@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Quiz, MultipleChoiceQuestion, ShortAnswerQuestion, QuizTemplateData } from './quizTypes';
+import { Quiz, MultipleChoiceQuestion, ShortAnswerQuestion, LongAnswerQuestion, QuizTemplateData } from './quizTypes';
 
 const STORAGE_KEY = 'quizzes';
 
@@ -40,6 +40,7 @@ export function useQuizzes() {
       questions: {
         multiplechoice: [],
         shortanswer: [],
+        longanswer: [],
       },
       createdAt: Date.now(),
     };
@@ -81,6 +82,13 @@ export function useQuizzes() {
           id: `sa-${Date.now()}-${idx}`,
           question: q.question,
           answer: q.answer,
+          order: idx,
+        })),
+        longanswer: (quizData.questions?.longanswer || []).map((q, idx) => ({
+          id: `la-${Date.now()}-${idx}`,
+          question: q.question,
+          answer: q.answer,
+          totalPoints: q.totalPoints,
           order: idx,
         })),
       },
@@ -148,12 +156,38 @@ export function useQuizzes() {
     });
   };
 
+  // Add a long answer question
+  const addLongAnswerQuestion = (
+    quizId: string,
+    question: string,
+    answer: string,
+    totalPoints: number
+  ): void => {
+    const quiz = getQuiz(quizId);
+    if (!quiz) return;
+
+    const newQuestion: LongAnswerQuestion = {
+      id: `la-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      question,
+      answer,
+      totalPoints,
+      order: quiz.questions.longanswer.length,
+    };
+
+    updateQuiz(quizId, {
+      questions: {
+        ...quiz.questions,
+        longanswer: [...quiz.questions.longanswer, newQuestion],
+      },
+    });
+  };
+
   // Update a question
   const updateQuestion = (
     quizId: string,
     questionId: string,
-    type: 'multiplechoice' | 'shortanswer',
-    updates: Partial<MultipleChoiceQuestion | ShortAnswerQuestion>
+    type: 'multiplechoice' | 'shortanswer' | 'longanswer',
+    updates: Partial<MultipleChoiceQuestion | ShortAnswerQuestion | LongAnswerQuestion>
   ): void => {
     const quiz = getQuiz(quizId);
     if (!quiz) return;
@@ -167,11 +201,20 @@ export function useQuizzes() {
           ),
         },
       });
-    } else {
+    } else if (type === 'shortanswer') {
       updateQuiz(quizId, {
         questions: {
           ...quiz.questions,
           shortanswer: quiz.questions.shortanswer.map(q =>
+            q.id === questionId ? { ...q, ...updates } : q
+          ),
+        },
+      });
+    } else {
+      updateQuiz(quizId, {
+        questions: {
+          ...quiz.questions,
+          longanswer: quiz.questions.longanswer.map(q =>
             q.id === questionId ? { ...q, ...updates } : q
           ),
         },
@@ -183,7 +226,7 @@ export function useQuizzes() {
   const deleteQuestion = (
     quizId: string,
     questionId: string,
-    type: 'multiplechoice' | 'shortanswer'
+    type: 'multiplechoice' | 'shortanswer' | 'longanswer'
   ): void => {
     const quiz = getQuiz(quizId);
     if (!quiz) return;
@@ -198,7 +241,7 @@ export function useQuizzes() {
           multiplechoice: reordered,
         },
       });
-    } else {
+    } else if (type === 'shortanswer') {
       const filtered = quiz.questions.shortanswer.filter(q => q.id !== questionId);
       const reordered = filtered.map((q, idx) => ({ ...q, order: idx }));
       updateQuiz(quizId, {
@@ -207,13 +250,22 @@ export function useQuizzes() {
           shortanswer: reordered,
         },
       });
+    } else {
+      const filtered = quiz.questions.longanswer.filter(q => q.id !== questionId);
+      const reordered = filtered.map((q, idx) => ({ ...q, order: idx }));
+      updateQuiz(quizId, {
+        questions: {
+          ...quiz.questions,
+          longanswer: reordered,
+        },
+      });
     }
   };
 
   // Reorder questions within a type
   const reorderQuestions = (
     quizId: string,
-    type: 'multiplechoice' | 'shortanswer',
+    type: 'multiplechoice' | 'shortanswer' | 'longanswer',
     questionId: string,
     direction: 'up' | 'down'
   ): void => {
@@ -222,7 +274,9 @@ export function useQuizzes() {
 
     const questions = type === 'multiplechoice'
       ? quiz.questions.multiplechoice
-      : quiz.questions.shortanswer;
+      : type === 'shortanswer'
+      ? quiz.questions.shortanswer
+      : quiz.questions.longanswer;
 
     const index = questions.findIndex(q => q.id === questionId);
     if (index === -1) return;
@@ -243,11 +297,18 @@ export function useQuizzes() {
           multiplechoice: final as MultipleChoiceQuestion[],
         },
       });
-    } else {
+    } else if (type === 'shortanswer') {
       updateQuiz(quizId, {
         questions: {
           ...quiz.questions,
           shortanswer: final as ShortAnswerQuestion[],
+        },
+      });
+    } else {
+      updateQuiz(quizId, {
+        questions: {
+          ...quiz.questions,
+          longanswer: final as LongAnswerQuestion[],
         },
       });
     }
@@ -264,6 +325,7 @@ export function useQuizzes() {
     exportQuiz,
     addMultipleChoiceQuestion,
     addShortAnswerQuestion,
+    addLongAnswerQuestion,
     updateQuestion,
     deleteQuestion,
     reorderQuestions,

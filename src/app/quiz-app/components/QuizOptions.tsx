@@ -5,10 +5,12 @@ import { useState } from 'react';
 interface QuizOptionsProps {
   totalMultipleChoice: number;
   totalShortAnswer: number;
+  totalLongAnswer: number;
   onStart: (options: {
     randomize: boolean;
     mcCount: number | 'all';
     saCount: number | 'all';
+    laCount: number | 'all';
   }) => void;
   onCancel: () => void;
 }
@@ -16,18 +18,22 @@ interface QuizOptionsProps {
 export default function QuizOptions({
   totalMultipleChoice,
   totalShortAnswer,
+  totalLongAnswer,
   onStart,
   onCancel,
 }: QuizOptionsProps) {
   const [randomize, setRandomize] = useState(true);
   const [mcCountType, setMcCountType] = useState<'all' | 'custom'>('all');
   const [saCountType, setSaCountType] = useState<'all' | 'custom'>('all');
+  const [laCountType, setLaCountType] = useState<'all' | 'custom'>('all');
   const [mcCustomCount, setMcCustomCount] = useState(totalMultipleChoice);
   const [saCustomCount, setSaCustomCount] = useState(totalShortAnswer);
+  const [laCustomCount, setLaCustomCount] = useState(totalLongAnswer);
 
   const handleStart = () => {
     const mcCount = mcCountType === 'all' ? 'all' : mcCustomCount;
     const saCount = saCountType === 'all' ? 'all' : saCustomCount;
+    const laCount = laCountType === 'all' ? 'all' : laCustomCount;
 
     // Validation
     if (mcCountType === 'custom' && (mcCustomCount < 1 || mcCustomCount > totalMultipleChoice)) {
@@ -38,8 +44,12 @@ export default function QuizOptions({
       alert(`Short answer count must be between 1 and ${totalShortAnswer}`);
       return;
     }
+    if (laCountType === 'custom' && (laCustomCount < 1 || laCustomCount > totalLongAnswer)) {
+      alert(`Long answer count must be between 1 and ${totalLongAnswer}`);
+      return;
+    }
 
-    onStart({ randomize, mcCount, saCount });
+    onStart({ randomize, mcCount, saCount, laCount });
   };
 
   return (
@@ -127,6 +137,42 @@ export default function QuizOptions({
                 value={saCustomCount}
                 onChange={(e) => setSaCustomCount(parseInt(e.target.value) || 1)}
                 disabled={saCountType === 'all'}
+                className="w-20 p-1 border-2 border-primary/20 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </label>
+          </div>
+        )}
+
+        {/* Long Answer Count */}
+        {totalLongAnswer > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">
+              Long Answer Questions (Total: {totalLongAnswer})
+            </h3>
+            <label className="flex items-center gap-2 mb-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={laCountType === 'all'}
+                onChange={() => setLaCountType('all')}
+                className="w-4 h-4"
+              />
+              <span>All questions</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                checked={laCountType === 'custom'}
+                onChange={() => setLaCountType('custom')}
+                className="w-4 h-4"
+              />
+              <span>Custom amount:</span>
+              <input
+                type="number"
+                min={1}
+                max={totalLongAnswer}
+                value={laCustomCount}
+                onChange={(e) => setLaCustomCount(parseInt(e.target.value) || 1)}
+                disabled={laCountType === 'all'}
                 className="w-20 p-1 border-2 border-primary/20 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </label>
