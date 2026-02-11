@@ -8,6 +8,9 @@ import {
   MultipleChoiceFormData,
   ShortAnswerFormData,
   LongAnswerFormData,
+  MultipleChoiceQuestion,
+  ShortAnswerQuestion,
+  LongAnswerQuestion,
 } from '@/lib/quizTypes';
 import QuestionForm from '../../components/QuestionForm';
 import QuestionItem from '../../components/QuestionItem';
@@ -119,12 +122,26 @@ export default function EditQuizPage() {
     shortanswer?: Array<{ question: string; answer: string }>;
     longanswer?: Array<{ question: string; answer: string; totalPoints: number }>;
   }) => {
+    // Get current quiz state
+    const currentQuiz = getQuiz(quizId);
+    if (!currentQuiz) return;
+
+    // Build new question arrays by appending imported questions
+    const newMultipleChoice = [...currentQuiz.questions.multiplechoice];
+    const newShortAnswer = [...currentQuiz.questions.shortanswer];
+    const newLongAnswer = [...currentQuiz.questions.longanswer];
+
     let importedCount = 0;
 
     // Import multiple choice questions
     if (data.multiplechoice) {
       for (const q of data.multiplechoice) {
-        addMultipleChoiceQuestion(quizId, q.question, q.choices.correct, q.choices.incorrect);
+        newMultipleChoice.push({
+          id: `mc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${importedCount}`,
+          question: q.question,
+          choices: q.choices,
+          order: newMultipleChoice.length,
+        });
         importedCount++;
       }
     }
@@ -132,7 +149,12 @@ export default function EditQuizPage() {
     // Import short answer questions
     if (data.shortanswer) {
       for (const q of data.shortanswer) {
-        addShortAnswerQuestion(quizId, q.question, q.answer);
+        newShortAnswer.push({
+          id: `sa-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${importedCount}`,
+          question: q.question,
+          answer: q.answer,
+          order: newShortAnswer.length,
+        });
         importedCount++;
       }
     }
@@ -140,10 +162,25 @@ export default function EditQuizPage() {
     // Import long answer questions
     if (data.longanswer) {
       for (const q of data.longanswer) {
-        addLongAnswerQuestion(quizId, q.question, q.answer, q.totalPoints);
+        newLongAnswer.push({
+          id: `la-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${importedCount}`,
+          question: q.question,
+          answer: q.answer,
+          totalPoints: q.totalPoints,
+          order: newLongAnswer.length,
+        });
         importedCount++;
       }
     }
+
+    // Single state update with all imported questions
+    updateQuiz(quizId, {
+      questions: {
+        multiplechoice: newMultipleChoice,
+        shortanswer: newShortAnswer,
+        longanswer: newLongAnswer,
+      },
+    });
 
     setShowImportModal(false);
     alert(`Successfully imported ${importedCount} question${importedCount !== 1 ? 's' : ''}!`);
