@@ -15,7 +15,17 @@ export function useQuizzes() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          setQuizzes(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          // Migrate old quizzes to ensure they have all question types
+          const migrated = parsed.map((quiz: Quiz) => ({
+            ...quiz,
+            questions: {
+              multiplechoice: quiz.questions?.multiplechoice || [],
+              shortanswer: quiz.questions?.shortanswer || [],
+              longanswer: quiz.questions?.longanswer || [],
+            },
+          }));
+          setQuizzes(migrated);
         } catch (error) {
           console.error('Failed to parse quizzes from localStorage:', error);
         }
