@@ -17,9 +17,9 @@ export default function TakeQuizPage() {
   const router = useRouter();
   const params = useParams();
   const quizId = params.id as string;
-  const { getQuiz } = useQuizzes();
+  const { getQuiz, isLoaded } = useQuizzes();
 
-  const quiz = getQuiz(quizId);
+  const quiz = isLoaded ? getQuiz(quizId) : null;
 
   const [showOptions, setShowOptions] = useState(true);
   const [quizCompleted, setQuizCompleted] = useState(false);

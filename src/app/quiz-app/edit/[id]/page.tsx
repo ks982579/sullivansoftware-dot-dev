@@ -30,6 +30,7 @@ export default function EditQuizPage() {
     updateQuestion,
     deleteQuestion,
     reorderQuestions,
+    isLoaded,
   } = useQuizzes();
 
   const [title, setTitle] = useState('');
@@ -38,7 +39,7 @@ export default function EditQuizPage() {
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  const quiz = getQuiz(quizId);
+  const quiz = isLoaded ? getQuiz(quizId) : null;
 
   useEffect(() => {
     if (quiz) {

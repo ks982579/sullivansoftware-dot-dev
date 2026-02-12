@@ -25,6 +25,7 @@ export default function CreateQuizPage() {
     deleteQuestion,
     reorderQuestions,
     getQuiz,
+    isLoaded,
   } = useQuizzes();
 
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function CreateQuizPage() {
   const [addingQuestionType, setAddingQuestionType] = useState<QuestionType | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  const quiz = currentQuizId ? getQuiz(currentQuizId) : null;
+  const quiz = currentQuizId && isLoaded ? getQuiz(currentQuizId) : null;
 
   const handleCreateQuiz = () => {
     if (!title.trim()) {

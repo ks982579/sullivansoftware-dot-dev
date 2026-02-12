@@ -11,10 +11,22 @@ interface QuizAppClientProps {
 
 export default function QuizAppClient({ templates }: QuizAppClientProps) {
   const router = useRouter();
-  const { quizzes, deleteQuiz, exportQuiz, importQuiz } = useQuizzes();
+  const { quizzes, isLoaded, deleteQuiz, exportQuiz, importQuiz } = useQuizzes();
   const [showJSONImport, setShowJSONImport] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
+
+  // Don't render quiz list until data is loaded and migrated
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold text-secondary mb-8">Quiz App</h1>
+          <p className="text-text-secondary">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleCreateQuiz = () => {
     router.push('/quiz-app/create');
