@@ -272,6 +272,21 @@ export function useQuizzes() {
     }
   };
 
+  // Reorder quizzes in the list
+  const reorderQuiz = (id: string, direction: 'up' | 'down'): void => {
+    setQuizzes(prev => {
+      const index = prev.findIndex(q => q.id === id);
+      if (index === -1) return prev;
+
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+
+      const reordered = [...prev];
+      [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+      return reordered;
+    });
+  };
+
   // Reorder questions within a type
   const reorderQuestions = (
     quizId: string,
@@ -338,6 +353,7 @@ export function useQuizzes() {
     addLongAnswerQuestion,
     updateQuestion,
     deleteQuestion,
+    reorderQuiz,
     reorderQuestions,
   };
 }

@@ -11,7 +11,7 @@ interface QuizAppClientProps {
 
 export default function QuizAppClient({ templates }: QuizAppClientProps) {
   const router = useRouter();
-  const { quizzes, isLoaded, deleteQuiz, exportQuiz, importQuiz } = useQuizzes();
+  const { quizzes, isLoaded, deleteQuiz, exportQuiz, importQuiz, reorderQuiz } = useQuizzes();
   const [showJSONImport, setShowJSONImport] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
@@ -238,51 +238,76 @@ export default function QuizAppClient({ templates }: QuizAppClientProps) {
                   quiz.questions.shortanswer.length +
                   quiz.questions.longanswer.length;
 
+                const quizIndex = quizzes.indexOf(quiz);
+
                 return (
                   <div
                     key={quiz.id}
                     className="p-6 bg-paper rounded-lg border-2 border-primary/20 hover:border-primary/50 transition-all duration-300"
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-xl font-semibold text-secondary">
-                          {quiz.title}
-                        </h3>
-                        {quiz.description && (
-                          <p className="text-sm text-text-secondary mt-1">
-                            {quiz.description}
-                          </p>
-                        )}
-                        <p className="text-sm text-text-secondary mt-2">
-                          {totalQuestions} question{totalQuestions !== 1 ? 's' : ''}
-                        </p>
+                    <div className="flex gap-4">
+                      {/* Reorder buttons */}
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <button
+                          onClick={() => reorderQuiz(quiz.id, 'up')}
+                          disabled={quizIndex === 0}
+                          className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                          title="Move up"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onClick={() => reorderQuiz(quiz.id, 'down')}
+                          disabled={quizIndex === quizzes.length - 1}
+                          className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                          title="Move down"
+                        >
+                          ▼
+                        </button>
                       </div>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <button
-                        onClick={() => router.push(`/quiz-app/take/${quiz.id}`)}
-                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-semibold"
-                      >
-                        Take Quiz
-                      </button>
-                      <button
-                        onClick={() => router.push(`/quiz-app/edit/${quiz.id}`)}
-                        className="px-4 py-2 bg-accent-orange text-white rounded-lg hover:bg-accent-orange/90"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleExportQuiz(quiz.id, quiz.title)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                      >
-                        Export JSON
-                      </button>
-                      <button
-                        onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                      >
-                        Delete
-                      </button>
+
+                      {/* Quiz content */}
+                      <div className="flex-1">
+                        <div className="mb-2">
+                          <h3 className="text-xl font-semibold text-secondary">
+                            {quiz.title}
+                          </h3>
+                          {quiz.description && (
+                            <p className="text-sm text-text-secondary mt-1">
+                              {quiz.description}
+                            </p>
+                          )}
+                          <p className="text-sm text-text-secondary mt-2">
+                            {totalQuestions} question{totalQuestions !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <button
+                            onClick={() => router.push(`/quiz-app/take/${quiz.id}`)}
+                            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-semibold"
+                          >
+                            Take Quiz
+                          </button>
+                          <button
+                            onClick={() => router.push(`/quiz-app/edit/${quiz.id}`)}
+                            className="px-4 py-2 bg-accent-orange text-white rounded-lg hover:bg-accent-orange/90"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleExportQuiz(quiz.id, quiz.title)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                          >
+                            Export JSON
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );

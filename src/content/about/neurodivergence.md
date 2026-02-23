@@ -10,11 +10,13 @@ draft: false
 
 # Understanding Neurodivergence
 
-Neurodivergence refers to variations in the human brain regarding sociability, learning, attention, mood, and other mental functions. It's not a deficit or disorder, but rather a different way of experiencing and interacting with the world.
+Neurodivergence refers to variations in the human brain regarding sociability, learning, attention, mood, and other mental functions. 
+It's not a deficit or disorder, but rather a different way of experiencing and interacting with the world.
 
 ## My Journey
 
-As someone who is neurodivergent, I've learned that my brain processes information differently—and that's not just okay, it's valuable. The same traits that can make certain tasks challenging also contribute to unique strengths in problem-solving, pattern recognition, and creative thinking.
+As someone who is neurodivergent, I've learned that my brain processes information differently—and that's not just okay, it's valuable.
+The same traits that can make certain tasks challenging also contribute to unique strengths in problem-solving, pattern recognition, and creative thinking.
 
 ### In Software Engineering
 
@@ -64,6 +66,8 @@ If you're interested in learning more about neurodiversity in tech:
 
 ## Final Thoughts
 
-Being neurodivergent in tech is both a challenge and an advantage. By understanding how my brain works and creating systems that support my strengths while accommodating my challenges, I've been able to build a successful career doing work I love.
+Being neurodivergent in tech is both a challenge and an advantage. 
+By understanding how my brain works and creating systems that support my strengths while accommodating my challenges, I've been able to build a successful career doing work I love.
 
-Neurodiversity isn't something to overcome—it's something to understand, accept, and leverage. The future of technology will be shaped by all kinds of minds, and that diversity will make our solutions stronger.
+Neurodiversity isn't something to overcome—it's something to understand, accept, and leverage. 
+The future of technology will be shaped by all kinds of minds, and that diversity will make our solutions stronger.
