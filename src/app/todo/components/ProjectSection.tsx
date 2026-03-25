@@ -106,12 +106,16 @@ export const ProjectSection = ({
       <div className="mb-6">
         <div
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-start gap-3 w-full p-4 bg-primary/10 hover:bg-primary/15 border-2 border-primary/40 rounded-lg transition-all duration-200 hover:border-primary/60 cursor-pointer group"
+          className={`flex items-start gap-3 w-full p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer group ${
+            project.completed
+              ? 'bg-gray-100 border-gray-300 hover:border-gray-400'
+              : 'bg-primary/10 hover:bg-primary/15 border-primary/40 hover:border-primary/60'
+          }`}
         >
           <svg
-            className={`w-7 h-7 text-primary flex-shrink-0 mt-0.5 transition-transform duration-200 ${
+            className={`w-7 h-7 flex-shrink-0 mt-0.5 transition-transform duration-200 ${
               isExpanded ? 'rotate-90' : ''
-            }`}
+            } ${project.completed ? 'text-gray-400' : 'text-primary'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -123,6 +127,15 @@ export const ProjectSection = ({
               d="M9 5l7 7-7 7"
             />
           </svg>
+
+          <input
+            type="checkbox"
+            checked={project.completed}
+            onChange={() => onToggleComplete(project.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1.5 w-5 h-5 accent-primary cursor-pointer rounded flex-shrink-0"
+            aria-label={`Mark ${project.title} as ${project.completed ? 'incomplete' : 'complete'}`}
+          />
 
           <div className="text-left flex-1">
             {isEditing ? (
@@ -139,7 +152,9 @@ export const ProjectSection = ({
                 placeholder="Project name..."
               />
             ) : (
-              <h2 className="text-xl font-bold text-primary">{project.title}</h2>
+              <h2 className={`text-xl font-bold ${project.completed ? 'line-through text-gray-400' : 'text-primary'}`}>
+                {project.title}
+              </h2>
             )}
             <div className="flex gap-2 mt-2 flex-wrap">
               <span className="px-3 py-1 text-xs font-semibold rounded border-2 bg-primary/20 border-primary text-primary">

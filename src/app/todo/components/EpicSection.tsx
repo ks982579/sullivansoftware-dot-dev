@@ -107,12 +107,16 @@ export const EpicSection = ({
       <div className="mb-4">
         <div
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-start gap-3 w-full p-4 bg-primary/5 hover:bg-primary/10 border-2 border-primary/30 rounded-lg transition-all duration-200 hover:border-primary/50 cursor-pointer group"
+          className={`flex items-start gap-3 w-full p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer group ${
+            epic.completed
+              ? 'bg-gray-100 border-gray-300 hover:border-gray-400'
+              : 'bg-primary/5 hover:bg-primary/10 border-primary/30 hover:border-primary/50'
+          }`}
         >
           <svg
-            className={`w-6 h-6 text-primary flex-shrink-0 mt-0.5 transition-transform duration-200 ${
+            className={`w-6 h-6 flex-shrink-0 mt-0.5 transition-transform duration-200 ${
               isExpanded ? 'rotate-90' : ''
-            }`}
+            } ${epic.completed ? 'text-gray-400' : 'text-primary'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -124,6 +128,15 @@ export const EpicSection = ({
               d="M9 5l7 7-7 7"
             />
           </svg>
+
+          <input
+            type="checkbox"
+            checked={epic.completed}
+            onChange={() => onToggleComplete(epic.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1.5 w-5 h-5 accent-primary cursor-pointer rounded flex-shrink-0"
+            aria-label={`Mark ${epic.title} as ${epic.completed ? 'incomplete' : 'complete'}`}
+          />
 
           <div className="text-left flex-1">
             {isEditing ? (
@@ -140,7 +153,9 @@ export const EpicSection = ({
                 placeholder="Epic name..."
               />
             ) : (
-              <h3 className="text-lg font-bold text-primary">{epic.title}</h3>
+              <h3 className={`text-lg font-bold ${epic.completed ? 'line-through text-gray-400' : 'text-primary'}`}>
+                {epic.title}
+              </h3>
             )}
             <div className="flex gap-2 mt-2 flex-wrap">
               <span className="px-3 py-1 text-xs font-semibold rounded border-2 bg-primary/10 border-primary text-primary">
@@ -399,12 +414,16 @@ const StorySection = ({
     <div className="mb-4 border-l-4 border-secondary/30 pl-4">
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-start gap-3 w-full p-3 bg-secondary/5 hover:bg-secondary/10 border-2 border-secondary/20 rounded transition-all duration-200 hover:border-secondary/40 cursor-pointer group"
+        className={`flex items-start gap-3 w-full p-3 border-2 rounded transition-all duration-200 cursor-pointer group ${
+          story.completed
+            ? 'bg-gray-100 border-gray-300 hover:border-gray-400'
+            : 'bg-secondary/5 hover:bg-secondary/10 border-secondary/20 hover:border-secondary/40'
+        }`}
       >
         <svg
-          className={`w-5 h-5 text-secondary flex-shrink-0 mt-0.5 transition-transform duration-200 ${
+          className={`w-5 h-5 flex-shrink-0 mt-0.5 transition-transform duration-200 ${
             isExpanded ? 'rotate-90' : ''
-          }`}
+          } ${story.completed ? 'text-gray-400' : 'text-secondary'}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -416,6 +435,15 @@ const StorySection = ({
             d="M9 5l7 7-7 7"
           />
         </svg>
+
+        <input
+          type="checkbox"
+          checked={story.completed}
+          onChange={() => onToggleComplete(story.id)}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-1 w-4 h-4 accent-secondary cursor-pointer rounded flex-shrink-0"
+          aria-label={`Mark ${story.title} as ${story.completed ? 'incomplete' : 'complete'}`}
+        />
 
         <div className="text-left flex-1">
           {isEditing ? (
@@ -432,7 +460,9 @@ const StorySection = ({
               placeholder="Story name..."
             />
           ) : (
-            <h4 className="font-semibold text-secondary">{story.title}</h4>
+            <h4 className={`font-semibold ${story.completed ? 'line-through text-gray-400' : 'text-secondary'}`}>
+              {story.title}
+            </h4>
           )}
           <div className="flex gap-2 mt-1 flex-wrap">
             <span className="px-2 py-0.5 text-xs font-semibold rounded border bg-secondary/10 border-secondary text-secondary">
