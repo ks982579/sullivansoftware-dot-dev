@@ -135,33 +135,33 @@ Zero-to-hero notes series for the `/notes` section. Each note follows a 4-step a
 ## Mastery
 
 ### `planning-workflow.md` — Planning Workflow
-- [ ] **Research** — use /plan mode during this project and document observations; read plan mode docs
+- [x] **Research** — use /plan mode during this project and document observations; read plan mode docs
   - *Why: first-hand experience of the workflow produces more honest and useful notes*
-- [ ] **Write** — draft: why plan before coding, /plan activation, plan file location, the 5-phase workflow, prompting strategies
+- [x] **Write** — draft: why plan before coding, /plan activation, plan file location, the 5-phase workflow, prompting strategies
   - *Why: produces the actual note content*
-- [ ] **Review** — walk through the 5-phase workflow step-by-step to verify it matches actual Claude Code behaviour
+- [x] **Review** — walk through the 5-phase workflow step-by-step to verify it matches actual Claude Code behaviour
   - *Why: plan mode is nuanced — imprecise description leads to cargo-culting rather than understanding*
-- [ ] **Publish** — set `draft: false` in `planning-workflow.md`
+- [x] **Publish** — set `draft: false` in `planning-workflow.md`
   - *Why: makes the note visible on the live site*
 
 ### `subagents.md` — Subagents
-- [ ] **Research** — read Agent tool docs; list all available subagent types with their descriptions and tool access
+- [x] **Research** — read Agent tool docs; list all available subagent types with their descriptions and tool access
   - *Why: each subagent type has a specific purpose that isn't obvious from the name alone*
-- [ ] **Write** — draft: Agent tool, available types, foreground vs background, SendMessage continuation, when to delegate vs work directly, prompting tips
+- [x] **Write** — draft: Agent tool, available types, foreground vs background, SendMessage continuation, when to delegate vs work directly, prompting tips
   - *Why: produces the actual note content*
-- [ ] **Review** — verify subagent type names and capabilities are current; check that examples illustrate real trade-offs
+- [x] **Review** — verify subagent type names and capabilities are current; check that examples illustrate real trade-offs
   - *Why: subagent types evolve — accurate type names prevent reader confusion*
-- [ ] **Publish** — set `draft: false` in `subagents.md`
+- [x] **Publish** — set `draft: false` in `subagents.md`
   - *Why: makes the note visible on the live site*
 
 ### `parallel-agents.md` — Parallel Agents
-- [ ] **Research** — review parallel agent patterns used in this project; read worktree isolation docs
+- [x] **Research** — review parallel agent patterns used in this project; read worktree isolation docs
   - *Why: parallel orchestration is the highest-leverage capability and deserves concrete, tested patterns*
-- [ ] **Write** — draft: multiple Agent calls in one message, worktree isolation, coordination patterns, SendMessage, practical orchestration example
+- [x] **Write** — draft: multiple Agent calls in one message, worktree isolation, coordination patterns, SendMessage, practical orchestration example
   - *Why: produces the actual note content*
-- [ ] **Review** — trace through the example step-by-step to verify it's coherent and achievable
+- [x] **Review** — trace through the example step-by-step to verify it's coherent and achievable
   - *Why: an orchestration example that can't be reproduced teaches false confidence*
-- [ ] **Publish** — set `draft: false` in `parallel-agents.md`
+- [x] **Publish** — set `draft: false` in `parallel-agents.md`
   - *Why: makes the note visible on the live site*
 
 ---
