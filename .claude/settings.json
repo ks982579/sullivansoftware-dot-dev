@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/kevinsullivan/Projects/sullivansoftware-dot-dev && npm run lint --silent 2>&1 | tail -20"
+          }
+        ]
+      }
+    ]
+  }
+}
