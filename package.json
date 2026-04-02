@@ -23,6 +23,7 @@
     "netlify-cli": "^23.9.1",
     "next": "^15.5.9",
     "next-mdx-remote": "^5.0.0",
+    "pdfjs-dist": "^5.6.205",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "rehype-highlight": "^7.0.2",

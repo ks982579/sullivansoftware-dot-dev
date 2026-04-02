@@ -40,9 +40,14 @@ src/
 │   │   ├── page.tsx         # Notes index with expandable topic cards
 │   │   ├── /[topic]/[subtopic]/[slug]  # Dynamic route for individual notes
 │   │   └── /components
-│   │       └── TopicCard.tsx           # Client component for expandable cards
-│   ├── /tts                 # Text-to-speech utility tool
-│   │   └── page.tsx         # TTS interface with PDF text cleanup
+│   │       ├── TopicCard.tsx           # Client component for expandable cards
+│   │       ├── TTSSettings.tsx         # Collapsible TTS voice/rate/pitch panel (client)
+│   │       ├── TTSParagraph.tsx        # Hoverable <p> wrapper with TTS start/stop (client)
+│   │       └── TTSList.tsx             # Hoverable <ul>/<ol> wrapper with TTS start/stop (client)
+│   ├── /tts                 # Text-to-speech utility tools
+│   │   ├── page.tsx         # TTS interface with PDF text cleanup
+│   │   └── /pdftts
+│   │       └── page.tsx     # PDF import → text extraction → per-paragraph TTS
 │   ├── /todo                # Todo list feature (Projects/Epics/Stories/Tasks)
 │   │   ├── page.tsx
 │   │   ├── PROJECT.md       # Feature documentation
@@ -75,7 +80,8 @@ src/
 │   ├── useWorkspaces.ts    # Custom React hook for workspace management
 │   ├── useQuizzes.ts       # Custom React hook for quiz CRUD operations
 │   ├── quizTypes.ts        # TypeScript interfaces for Quiz, Questions, Answers, Templates
-│   └── quizTemplates.ts    # Server-side reader for quiz template JSON files
+│   ├── quizTemplates.ts    # Server-side reader for quiz template JSON files
+│   └── ttsStore.ts         # Module-level singleton for shared TTS voice/rate/pitch state
 ├── theme/                   # Design system
 │   ├── theme.ts            # MUI theme definition (Japanese Retro)
 │   └── README.md           # Theme documentation
@@ -140,7 +146,7 @@ src/
 - Inline editing: Click titles to edit Project/Epic/Story names; Task types use textarea
 - Shift+Enter in task textarea adds newline; Enter alone saves the task
 
-**Notes Feature (File-based with LaTeX Support):**
+**Notes Feature (File-based with LaTeX Support + per-block TTS):**
 - Master's programme notes organized in nested folder structure: `src/content/notes/[topic]/[subtopic]/*.md`
 - Data layer: `src/lib/notes.ts` with recursive folder traversal and hierarchical grouping
 - Full LaTeX/KaTeX support for mathematical equations (inline `$...$` and display `$$...$$`)
@@ -155,22 +161,37 @@ src/
   - Count badges showing number of notes per topic/subtopic
   - Code syntax highlighting via highlight.js
   - Japanese Retro theme with grid background
-- Architecture: Server component for data fetching, client component for interactivity
+  - **Per-block Text-to-Speech:** hover any paragraph, unordered list, or ordered list to reveal a dark-purple glowing border and Start/Stop buttons; reads the block's text content via Web Speech API
+  - **TTS Settings panel:** collapsible panel above the content card with voice selector, rate slider, and pitch slider; settings apply to all blocks on the page via `ttsStore.ts`
+- Architecture: Server component for data fetching, client components for interactivity and TTS
+- TTS implementation files:
+  - `src/lib/ttsStore.ts` — module-level singleton (`voice`, `rate`, `pitch`); avoids React Context issues across the RSC/client boundary
+  - `src/app/notes/components/TTSSettings.tsx` — collapsible settings panel; loads voices async via `onvoiceschanged`, writes to store
+  - `src/app/notes/components/TTSParagraph.tsx` — wraps MDX `<p>` elements; reads `textContent` via DOM ref at click time
+  - `src/app/notes/components/TTSList.tsx` — wraps MDX `<ul>` and `<ol>` elements; exports `TTSOl` and `TTSUl` named components
+  - `src/components/MdxContent.tsx` accepts optional `components` prop (`MDXRemoteProps["components"]`) so any page can inject custom element renderers
 
-**Text-to-Speech Tool (Browser-based):**
-- Located at `/tts` route in `src/app/tts/page.tsx`
+**Text-to-Speech Tools (Browser-based):**
+
+`/tts` — Manual TTS (`src/app/tts/page.tsx`):
 - Uses browser's Web Speech API (`window.speechSynthesis`)
 - SSR-safe implementation with proper `useEffect` hooks
-- Features:
-  - Voice selection from available system voices (auto-selects English by default)
-  - Adjustable speech rate (0.1x to 2x) and pitch (0.1 to 2)
-  - Full playback controls: Speak, Pause, Resume, Stop
-  - PDF text cleanup utilities for copying text without artifacts
-  - Smart speech formatting that removes references and handles special characters
+- Features: voice selection, adjustable rate (0.1×–2×) and pitch, full playback controls, PDF text cleanup utilities
 - Two text processing modes:
   - **Copy Cleaned Text**: Removes hyphenated line breaks (`-\n`) and normalizes newlines for general use
-  - **Speech Processing** (`_fmtTextForSpeech`): Additional cleanup including removal of square bracket references `[1]`, `[2]`, etc. and handling of double underscores as "underscore" pronunciation
-- Styled with Japanese Retro theme matching site design
+  - **Speech Processing** (`_fmtTextForSpeech`): Strips square bracket references, handles double underscores
+- Styled with Japanese Retro theme
+
+`/tts/pdftts` — PDF TTS (`src/app/tts/pdftts/page.tsx`):
+- Imports a PDF entirely client-side (no server involvement) via drag-and-drop or file picker
+- Uses **`pdfjs-dist`** (Mozilla PDF.js) to extract text content page-by-page
+- Worker loaded from unpkg CDN (`GlobalWorkerOptions.workerSrc`) to avoid Turbopack bundling issues
+- Text items grouped into paragraph blocks by detecting vertical gaps > 1.8× the preceding line height
+- Each extracted block is a hoverable TTS target with the same dark-purple border + glow + Start/Stop controls as the Notes pages
+- Per-page layout: each PDF page renders as a card with its extracted blocks
+- Pages with no extractable text (e.g. scanned images) display a "No extractable text" notice
+- TTS settings panel (voice / rate / pitch) at top of page writes to shared `ttsStore.ts` singleton
+- Self-contained: settings panel and `TtsBlock` component are defined inline in the page file
 
 **Quiz Application (localStorage-based):**
 - Located at `/quiz-app` route with create, edit, and take sub-routes
@@ -570,6 +591,9 @@ Target modern browsers (Chrome, Firefox, Safari, Edge) that support:
 
 ## Recent Updates
 
+- **PDF TTS page (April 2026):** New `/tts/pdftts` page that accepts a PDF via drag-and-drop or file picker, extracts text client-side with `pdfjs-dist` (Mozilla PDF.js), and renders it page-by-page with the same hover-to-speak block controls as the Notes feature. Paragraph grouping uses a relative gap heuristic (gap > 1.8× line height = new block). Worker served from unpkg CDN to sidestep Turbopack worker-bundling issues. Fully self-contained — no server calls at any point.
+- **Notes TTS — list support (April 2026):** Extended per-block TTS in the Notes feature to cover `<ul>` and `<ol>` elements in addition to paragraphs. `TTSList.tsx` contains a shared `TTSList` component parameterised by tag, exporting `TTSOl` and `TTSUl`. Both are passed via the `components` prop to `MdxContent` alongside `TTSParagraph`.
+- **Notes per-block Text-to-Speech (April 2026):** Added hover-activated TTS to every note page. Hovering a paragraph, unordered list, or ordered list shows a dark-purple glowing border and ▶ Start / ■ Stop buttons beneath the block. A collapsible "Text-to-Speech Settings" panel above the content card exposes voice, rate, and pitch controls. State is shared between the settings panel and paragraph/list components via a module-level singleton (`src/lib/ttsStore.ts`) — this sidesteps the React Context / RSC boundary issue that arises when `MDXRemote` (server-only) and interactive client components must share state. `MdxContent` was updated to accept an optional `components` prop so the pattern can be reused elsewhere.
 - **Quiz JSON Import Fix (February 2026):** Fixed React state batching issue in JSON import functionality for both create and edit modes. Previously, when importing multiple questions via JSON, only the last question of each type would be added due to React batching state updates. The fix batches all imported questions into a single state update, ensuring all questions are properly imported. Also added migration logic to `useQuizzes` hook to ensure old quizzes in localStorage have all three question type arrays (multiplechoice, shortanswer, longanswer) to prevent undefined errors.
 - **Long Answer Questions & Formatting Preservation (February 2026):** Added new Long Answer question type with custom point values (set during creation). Long answer grading uses two number inputs (Points Obtained and Total Points) for flexible scoring. All answer inputs now use textarea instead of text input for all question types (multiple choice, short answer, long answer). Added `whitespace-pre-wrap` CSS class to all textareas and answer displays to preserve formatting, line breaks, and spacing throughout creation, taking, and grading workflows. Updated JSON import/export format, quiz options, and all related components to support long answer questions.
 - **Quiz Manual Grading System (February 2026):** Enhanced short answer grading in quiz results with three-button grading interface (Correct: 2 pts, Partial: 1 pt, Incorrect: 0 pts). Results now display dynamic scoring with Multiple Choice Score, Short Answer Score (updates in real-time as questions are graded), and Final Grade combining both scores. Short answer correct answer input changed from single-line input to textarea for multi-line formatting support. Grading state persists during results view and resets on quiz retake.
