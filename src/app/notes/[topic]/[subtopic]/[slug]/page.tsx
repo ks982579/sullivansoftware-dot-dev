@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getAllNotes, getNoteBySlug } from "@/lib/notes";
 import MdxContent from "@/components/MdxContent";
+import TTSSettings from "@/app/notes/components/TTSSettings";
+import TTSParagraph from "@/app/notes/components/TTSParagraph";
+import { TTSOl, TTSUl } from "@/app/notes/components/TTSList";
 import Link from "next/link";
 
 interface NotePageProps {
@@ -117,9 +120,12 @@ export default async function NotePage({ params }: NotePageProps) {
           )}
         </header>
 
+        {/* TTS Settings — collapsible panel above content */}
+        <TTSSettings />
+
         {/* Content Card with KaTeX Support */}
         <div className="bg-paper rounded-lg border-2 border-accent-blue/20 p-8 shadow-sm">
-          <MdxContent source={note.content} />
+          <MdxContent source={note.content} components={{ p: TTSParagraph, ul: TTSUl, ol: TTSOl }} />
         </div>
 
         {/* Back to Top Link */}

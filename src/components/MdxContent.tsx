@@ -1,4 +1,4 @@
-import { MDXRemote } from "next-mdx-remote/rsc";
+import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
@@ -8,13 +8,15 @@ import "katex/dist/katex.min.css";
 
 interface MdxContentProps {
   source: string;
+  components?: MDXRemoteProps["components"];
 }
 
-export default function MdxContent({ source }: MdxContentProps) {
+export default function MdxContent({ source, components }: MdxContentProps) {
   return (
     <div className="prose prose-lg max-w-none text-left prose-headings:text-primary prose-headings:font-bold prose-p:text-text-primary prose-p:text-left prose-a:text-primary prose-a:hover:text-secondary prose-a:transition-colors prose-strong:text-text-primary prose-code:text-text-primary prose-code:bg-gray-100 prose-pre:bg-gray-50 prose-pre:border prose-pre:border-primary/20 prose-pre:text-left [&_.katex-display]:text-center [&_.katex-display]:my-4">
       <MDXRemote
         source={source}
+        components={components}
         options={{
           mdxOptions: {
             remarkPlugins: [remarkGfm, remarkMath],
