@@ -182,16 +182,22 @@ src/
   - **Speech Processing** (`_fmtTextForSpeech`): Strips square bracket references, handles double underscores
 - Styled with Japanese Retro theme
 
-`/tts/pdftts` — PDF TTS (`src/app/tts/pdftts/page.tsx`):
-- Imports a PDF entirely client-side (no server involvement) via drag-and-drop or file picker
-- Uses **`pdfjs-dist`** (Mozilla PDF.js) to extract text content page-by-page
-- Worker loaded from unpkg CDN (`GlobalWorkerOptions.workerSrc`) to avoid Turbopack bundling issues
-- Text items grouped into paragraph blocks by detecting vertical gaps > 1.8× the preceding line height
-- Each extracted block is a hoverable TTS target with the same dark-purple border + glow + Start/Stop controls as the Notes pages
-- Per-page layout: each PDF page renders as a card with its extracted blocks
-- Pages with no extractable text (e.g. scanned images) display a "No extractable text" notice
+`/tts/pdftts` — Document TTS (`src/app/tts/pdftts/page.tsx`):
+- Generic file-type architecture: `SUPPORTED_FILE_TYPES` constant at top of file — add new parsers by extending it
+- Currently supports: **PDF** (via `mupdf` WASM)
+- Imports a file entirely client-side (no server involvement) via drag-and-drop or file picker
+- Uses **`mupdf`** (MuPDF.js v1.27, AGPL-3.0) for structured PDF extraction
+  - WASM (~15 MB) is lazy-loaded only when a file is dropped — no cost on page load
+  - `mupdf.js` uses a top-level `await` so `await import('mupdf')` fully initialises the WASM automatically
+  - `next.config.ts` sets `experiments.asyncWebAssembly: true` and uses `NormalModuleReplacementPlugin` to strip `node:` prefixes + `resolve.fallback` to map Node.js built-ins to empty in browser builds (mupdf has conditional Node.js code paths that webpack analyses statically)
+- Text extracted via `StructuredText.walk()` walker — MuPDF's own paragraph grouping (not a gap heuristic):
+  - `beginTextBlock` / `endTextBlock` = paragraph boundaries
+  - `onChar` per-character `font.isMono()` → code block detection (threshold: > 80% mono chars)
+  - `onChar` `size` → heading detection (≥ 14 pt); level: h1 ≥ 24 pt, h2 ≥ 18 pt, h3 ≥ 14 pt
+  - `onImageBlock` → `image.toPixmap().asPNG()` → base64 `data:image/png` rendered inline
+- Content block types: `paragraph` (TTS hover), `heading` (bold/sized, TTS hover), `code` (monospace dark bg, TTS hover), `image` (inline `<img>`, no TTS)
 - TTS settings panel (voice / rate / pitch) at top of page writes to shared `ttsStore.ts` singleton
-- Self-contained: settings panel and `TtsBlock` component are defined inline in the page file
+- Self-contained: settings panel and `TtsTextBlock` component defined inline in the page file
 
 **Quiz Application (localStorage-based):**
 - Located at `/quiz-app` route with create, edit, and take sub-routes
@@ -591,7 +597,7 @@ Target modern browsers (Chrome, Firefox, Safari, Edge) that support:
 
 ## Recent Updates
 
-- **PDF TTS page (April 2026):** New `/tts/pdftts` page that accepts a PDF via drag-and-drop or file picker, extracts text client-side with `pdfjs-dist` (Mozilla PDF.js), and renders it page-by-page with the same hover-to-speak block controls as the Notes feature. Paragraph grouping uses a relative gap heuristic (gap > 1.8× line height = new block). Worker served from unpkg CDN to sidestep Turbopack worker-bundling issues. Fully self-contained — no server calls at any point.
+- **Document TTS page — mupdf rewrite (April 2026):** Replaced `pdfjs-dist` with `mupdf` (MuPDF.js v1.27) for proper structured extraction. The page now uses MuPDF's `StructuredText` walker to get MuPDF's own paragraph boundaries, per-character font metadata (`.isMono()` for code detection, `size` for headings), and inline image extraction (`image.toPixmap().asPNG()` → base64). `next.config.ts` updated with `asyncWebAssembly: true`, `NormalModuleReplacementPlugin` to strip `node:` prefixes, and `resolve.fallback` to stub out Node.js built-ins in browser builds. Page is now a generic multi-file-type architecture controlled by a `SUPPORTED_FILE_TYPES` constant. `pdfjs-dist` package remains installed but is no longer used by this page.
 - **Notes TTS — list support (April 2026):** Extended per-block TTS in the Notes feature to cover `<ul>` and `<ol>` elements in addition to paragraphs. `TTSList.tsx` contains a shared `TTSList` component parameterised by tag, exporting `TTSOl` and `TTSUl`. Both are passed via the `components` prop to `MdxContent` alongside `TTSParagraph`.
 - **Notes per-block Text-to-Speech (April 2026):** Added hover-activated TTS to every note page. Hovering a paragraph, unordered list, or ordered list shows a dark-purple glowing border and ▶ Start / ■ Stop buttons beneath the block. A collapsible "Text-to-Speech Settings" panel above the content card exposes voice, rate, and pitch controls. State is shared between the settings panel and paragraph/list components via a module-level singleton (`src/lib/ttsStore.ts`) — this sidesteps the React Context / RSC boundary issue that arises when `MDXRemote` (server-only) and interactive client components must share state. `MdxContent` was updated to accept an optional `components` prop so the pattern can be reused elsewhere.
 - **Quiz JSON Import Fix (February 2026):** Fixed React state batching issue in JSON import functionality for both create and edit modes. Previously, when importing multiple questions via JSON, only the last question of each type would be added due to React batching state updates. The fix batches all imported questions into a single state update, ensuring all questions are properly imported. Also added migration logic to `useQuizzes` hook to ensure old quizzes in localStorage have all three question type arrays (multiplechoice, shortanswer, longanswer) to prevent undefined errors.

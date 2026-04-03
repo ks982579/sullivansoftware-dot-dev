@@ -4,106 +4,174 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getTTSSettings, setTTSSettings } from '@/lib/ttsStore';
 
 // ---------------------------------------------------------------------------
-// PDF.js worker — use CDN to avoid Turbopack bundling issues with the worker
+// Supported file types — extend this list as new parsers are added
 // ---------------------------------------------------------------------------
-let pdfjsLib: typeof import('pdfjs-dist') | null = null;
 
-async function getPdfjs() {
-  if (pdfjsLib) return pdfjsLib;
-  const lib = await import('pdfjs-dist');
-  lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`;
-  pdfjsLib = lib;
-  return lib;
+const SUPPORTED_FILE_TYPES = [
+  { extension: 'pdf', mimeType: 'application/pdf', label: 'PDF' },
+] as const;
+
+const ACCEPT = SUPPORTED_FILE_TYPES.map((t) => t.mimeType).join(',');
+
+// ---------------------------------------------------------------------------
+// mupdf lazy loader — WASM is ~15 MB, only loaded when a file is dropped
+// ---------------------------------------------------------------------------
+
+type MupdfModule = typeof import('mupdf');
+let cachedMupdf: MupdfModule | null = null;
+
+async function getMupdf(): Promise<MupdfModule> {
+  if (!cachedMupdf) cachedMupdf = await import('mupdf');
+  return cachedMupdf;
 }
 
 // ---------------------------------------------------------------------------
-// Text extraction helpers
+// Content block types
 // ---------------------------------------------------------------------------
 
-interface TextLine {
-  y: number;
+interface TextContentBlock {
+  type: 'text';
+  subtype: 'paragraph' | 'heading' | 'code';
   text: string;
-  height: number;
-}
-
-interface PdfBlock {
-  id: string;
-  text: string;
+  headingLevel?: 1 | 2 | 3;
   pageNum: number;
+  id: string;
 }
 
-async function extractBlocks(buffer: ArrayBuffer): Promise<{ blocks: PdfBlock[]; numPages: number }> {
-  const lib = await getPdfjs();
-  const pdf = await lib.getDocument({ data: buffer }).promise;
-  const blocks: PdfBlock[] = [];
+interface ImageContentBlock {
+  type: 'image';
+  src: string;           // data:image/png;base64,…
+  pageNum: number;
+  id: string;
+}
+
+type ContentBlock = TextContentBlock | ImageContentBlock;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function uint8ToBase64(data: Uint8Array): string {
+  let binary = '';
+  // Process in chunks to avoid call-stack overflow on large images
+  const chunkSize = 8192;
+  for (let i = 0; i < data.length; i += chunkSize) {
+    binary += String.fromCharCode(...data.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// ---------------------------------------------------------------------------
+// PDF extraction via mupdf structured-text walker
+// ---------------------------------------------------------------------------
+
+async function extractFromPdf(
+  buffer: ArrayBuffer
+): Promise<{ blocks: ContentBlock[]; numPages: number }> {
+  const mupdf = await getMupdf();
+  const doc = mupdf.Document.openDocument(buffer, 'application/pdf');
+  const numPages = doc.countPages();
+  const blocks: ContentBlock[] = [];
   let blockIdx = 0;
 
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const content = await page.getTextContent();
+  for (let p = 0; p < numPages; p++) {
+    const pageNum = p + 1;
+    const page = doc.loadPage(p);
+    const stext = page.toStructuredText('preserve-whitespace');
 
-    // Collect text items with position
-    const lines: TextLine[] = [];
-    for (const item of content.items) {
-      if (!('str' in item) || !item.str.trim()) continue;
-      const y = item.transform[5];
-      const height = item.height || 12;
-      const existing = lines.find((l) => Math.abs(l.y - y) < 2);
-      if (existing) {
-        existing.text += ' ' + item.str;
-      } else {
-        lines.push({ y, text: item.str, height });
-      }
-    }
+    // --- walker state ---
+    let lines: string[] = [];
+    let currentLine = '';
+    let monoChars = 0;
+    let totalChars = 0;
+    let blockMaxSize = 0;
 
-    // Sort top-to-bottom (PDF y is bottom-up, so descending = reading order)
-    lines.sort((a, b) => b.y - a.y);
+    stext.walk({
+      onImageBlock(_bbox, _transform, image) {
+        try {
+          const pixmap = image.toPixmap();
+          const pngData = pixmap.asPNG();
+          pixmap.destroy();
+          const src = `data:image/png;base64,${uint8ToBase64(pngData)}`;
+          blocks.push({ type: 'image', src, pageNum, id: `b-${pageNum}-${blockIdx++}` });
+        } catch {
+          // Skip images that fail to render (e.g. unsupported color spaces)
+        }
+      },
 
-    // Group lines into paragraph blocks by detecting large vertical gaps
-    let current = '';
-    let prevY: number | null = null;
-    let prevHeight = 12;
+      beginTextBlock() {
+        lines = [];
+        currentLine = '';
+        monoChars = 0;
+        totalChars = 0;
+        blockMaxSize = 0;
+      },
 
-    const flush = () => {
-      const trimmed = current.trim();
-      if (trimmed) {
-        blocks.push({ id: `p-${pageNum}-${blockIdx++}`, text: trimmed, pageNum });
-      }
-      current = '';
-    };
+      beginLine() {
+        currentLine = '';
+      },
 
-    for (const line of lines) {
-      if (prevY !== null) {
-        const gap = prevY - line.y;
-        // New paragraph when gap exceeds 1.8× the previous line's height
-        if (gap > prevHeight * 1.8) flush();
-      }
-      current += (current ? ' ' : '') + line.text;
-      prevY = line.y;
-      prevHeight = line.height;
-    }
-    flush();
+      onChar(c, _origin, font, size) {
+        currentLine += c;
+        totalChars++;
+        if (font.isMono()) monoChars++;
+        if (size > blockMaxSize) blockMaxSize = size;
+      },
+
+      endLine() {
+        const trimmed = currentLine.trim();
+        if (trimmed) lines.push(trimmed);
+        currentLine = '';
+      },
+
+      endTextBlock() {
+        if (lines.length === 0) return;
+
+        const monoRatio = totalChars > 0 ? monoChars / totalChars : 0;
+        const isCode = monoRatio > 0.8;
+        // Body text is typically 10–12 pt; anything noticeably larger is a heading
+        const isHeading = blockMaxSize >= 14 && !isCode;
+
+        let subtype: TextContentBlock['subtype'] = 'paragraph';
+        let headingLevel: TextContentBlock['headingLevel'];
+
+        if (isCode) {
+          subtype = 'code';
+        } else if (isHeading) {
+          subtype = 'heading';
+          headingLevel = blockMaxSize >= 24 ? 1 : blockMaxSize >= 18 ? 2 : 3;
+        }
+
+        // Preserve line breaks for code; join with space for prose
+        const text = lines.join(isCode ? '\n' : ' ').trim();
+        if (!text) return;
+
+        blocks.push({ type: 'text', subtype, text, headingLevel, pageNum, id: `b-${pageNum}-${blockIdx++}` });
+      },
+    });
+
+    stext.destroy();
   }
 
-  return { blocks, numPages: pdf.numPages };
+  return { blocks, numPages };
 }
 
 // ---------------------------------------------------------------------------
-// Hoverable TTS block
+// Hoverable TTS wrapper (paragraphs, headings, code)
 // ---------------------------------------------------------------------------
 
-function TtsBlock({ text }: { text: string }) {
+function TtsTextBlock({ block }: { block: TextContentBlock }) {
   const [hovered, setHovered] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const ref = useRef<HTMLParagraphElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const active = hovered || speaking;
 
   function handleStart() {
-    const t = ref.current?.textContent?.trim() ?? '';
-    if (!t) return;
+    const text = ref.current?.textContent?.trim() ?? '';
+    if (!text) return;
     window.speechSynthesis.cancel();
     const { voice, rate, pitch } = getTTSSettings();
-    const utt = new SpeechSynthesisUtterance(t);
+    const utt = new SpeechSynthesisUtterance(text);
     if (voice) utt.voice = voice;
     utt.rate = rate;
     utt.pitch = pitch;
@@ -118,28 +186,59 @@ function TtsBlock({ text }: { text: string }) {
     setSpeaking(false);
   }
 
+  const borderStyle = active
+    ? { borderColor: 'rgba(88, 28, 135, 0.7)', boxShadow: '0 0 8px 2px rgba(139, 92, 246, 0.35)' }
+    : undefined;
+
+  const activeClass = active ? 'rounded-lg border-2 px-3 py-1 -mx-3 transition-all duration-150' : 'transition-all duration-150';
+
+  function renderContent() {
+    if (block.subtype === 'code') {
+      return (
+        <pre
+          ref={ref as React.RefObject<HTMLPreElement>}
+          className={`text-xs font-mono bg-gray-50 border border-primary/10 rounded p-3 overflow-x-auto whitespace-pre-wrap ${activeClass}`}
+          style={borderStyle}
+        >
+          {block.text}
+        </pre>
+      );
+    }
+
+    if (block.subtype === 'heading') {
+      const sizeClass =
+        block.headingLevel === 1 ? 'text-xl font-bold text-primary' :
+        block.headingLevel === 2 ? 'text-lg font-semibold text-primary' :
+        'text-base font-semibold text-secondary';
+      return (
+        <p
+          ref={ref as React.RefObject<HTMLParagraphElement>}
+          className={`${sizeClass} ${activeClass}`}
+          style={borderStyle}
+        >
+          {block.text}
+        </p>
+      );
+    }
+
+    return (
+      <p
+        ref={ref as React.RefObject<HTMLParagraphElement>}
+        className={`text-sm leading-relaxed text-text-primary ${activeClass}`}
+        style={borderStyle}
+      >
+        {block.text}
+      </p>
+    );
+  }
+
   return (
     <div
-      className="relative my-2"
+      className="relative my-1"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <p
-        ref={ref}
-        className={`text-sm leading-relaxed text-text-primary transition-all duration-150 ${
-          active ? 'rounded-lg border-2 px-3 py-1 -mx-3' : ''
-        }`}
-        style={
-          active
-            ? {
-                borderColor: 'rgba(88, 28, 135, 0.7)',
-                boxShadow: '0 0 8px 2px rgba(139, 92, 246, 0.35)',
-              }
-            : undefined
-        }
-      >
-        {text}
-      </p>
+      {renderContent()}
 
       {active && (
         <div className="flex gap-2 mt-1">
@@ -252,15 +351,16 @@ function SettingsPanel() {
 // ---------------------------------------------------------------------------
 
 export default function PdfTtsPage() {
-  const [blocks, setBlocks] = useState<PdfBlock[]>([]);
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [numPages, setNumPages] = useState(0);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleFile = useCallback(async (file: File) => {
-    if (!file || file.type !== 'application/pdf') {
-      setError('Please select a valid PDF file.');
+    const supported = SUPPORTED_FILE_TYPES.some((t) => t.mimeType === file.type);
+    if (!supported) {
+      setError(`Unsupported file type "${file.type}". Supported: ${SUPPORTED_FILE_TYPES.map((t) => t.label).join(', ')}.`);
       return;
     }
     setError('');
@@ -269,11 +369,11 @@ export default function PdfTtsPage() {
     setBlocks([]);
     try {
       const buffer = await file.arrayBuffer();
-      const { blocks: extracted, numPages: pages } = await extractBlocks(buffer);
+      const { blocks: extracted, numPages: pages } = await extractFromPdf(buffer);
       setBlocks(extracted);
       setNumPages(pages);
     } catch (e) {
-      setError(`Failed to parse PDF: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`Failed to parse file: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setLoading(false);
     }
@@ -290,7 +390,6 @@ export default function PdfTtsPage() {
     if (file) handleFile(file);
   }
 
-  // Group blocks by page for display
   const pages = Array.from({ length: numPages }, (_, i) => ({
     pageNum: i + 1,
     blocks: blocks.filter((b) => b.pageNum === i + 1),
@@ -309,34 +408,33 @@ export default function PdfTtsPage() {
       }}
     >
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">PDF Text-to-Speech</h1>
+          <h1 className="text-4xl font-bold text-primary mb-2">Document Text-to-Speech</h1>
           <p className="text-text-secondary text-sm">
-            Import a PDF — hover any paragraph to reveal audio controls. All processing happens in your browser.
+            Import a document — hover any block to reveal audio controls. All processing happens in your browser.
           </p>
         </div>
 
-        {/* TTS Settings */}
         <SettingsPanel />
 
-        {/* Drop zone / file picker */}
+        {/* Drop zone */}
         <div
           className="mb-8 rounded-lg border-2 border-dashed border-primary/30 bg-paper p-8 text-center transition-colors hover:border-primary/60"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
-          <p className="text-text-secondary text-sm mb-4">
-            Drag &amp; drop a PDF here, or click to browse
+          <p className="text-text-secondary text-sm mb-1">
+            Drag &amp; drop a file here, or click to browse
+          </p>
+          <p className="text-xs text-text-secondary/60 mb-4">
+            Supported file types:{' '}
+            {SUPPORTED_FILE_TYPES.map((t) => (
+              <span key={t.extension} className="font-medium text-text-secondary">{t.label}</span>
+            )).reduce<React.ReactNode[]>((acc, el, i) => (i === 0 ? [el] : [...acc, ', ', el]), [])}
           </p>
           <label className="cursor-pointer inline-block px-6 py-2 bg-primary text-white font-semibold rounded-lg shadow hover:shadow-md transition-shadow text-sm">
-            Choose PDF
-            <input
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={handleInputChange}
-            />
+            Choose File
+            <input type="file" accept={ACCEPT} className="hidden" onChange={handleInputChange} />
           </label>
           {fileName && (
             <p className="mt-3 text-xs text-text-secondary">
@@ -345,21 +443,18 @@ export default function PdfTtsPage() {
           )}
         </div>
 
-        {/* Error */}
         {error && (
           <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="text-center py-12 text-text-secondary text-sm animate-pulse">
-            Extracting text from PDF…
+            Extracting content… (loading WASM on first use)
           </div>
         )}
 
-        {/* Rendered pages */}
         {!loading && pages.length > 0 && (
           <div className="space-y-6">
             {pages.map(({ pageNum, blocks: pageBlocks }) => (
@@ -372,13 +467,25 @@ export default function PdfTtsPage() {
                     {pageBlocks.length} block{pageBlocks.length !== 1 ? 's' : ''}
                   </span>
                 </div>
+
                 {pageBlocks.length === 0 ? (
-                  <p className="text-xs text-text-secondary italic">No extractable text on this page.</p>
+                  <p className="text-xs text-text-secondary italic">No extractable content on this page.</p>
                 ) : (
                   <div className="space-y-1">
-                    {pageBlocks.map((block) => (
-                      <TtsBlock key={block.id} text={block.text} />
-                    ))}
+                    {pageBlocks.map((block) => {
+                      if (block.type === 'image') {
+                        return (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={block.id}
+                            src={block.src}
+                            alt="PDF image"
+                            className="max-w-full rounded border border-primary/10 my-2"
+                          />
+                        );
+                      }
+                      return <TtsTextBlock key={block.id} block={block} />;
+                    })}
                   </div>
                 )}
               </div>
