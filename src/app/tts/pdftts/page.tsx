@@ -9,9 +9,14 @@ import { getTTSSettings, setTTSSettings } from '@/lib/ttsStore';
 
 const SUPPORTED_FILE_TYPES = [
   { extension: 'pdf', mimeType: 'application/pdf', label: 'PDF' },
+  { extension: 'txt', mimeType: 'text/plain', label: 'Plain Text' },
+  // Markdown MIME type varies by OS; we also accept by extension in handleFile
+  { extension: 'md', mimeType: 'text/markdown', label: 'Markdown' },
 ] as const;
 
-const ACCEPT = SUPPORTED_FILE_TYPES.map((t) => t.mimeType).join(',');
+// Accept both MIME types and explicit extensions so browsers that report
+// .md files as text/plain still pass the picker filter.
+const ACCEPT = '.pdf,.txt,.md,application/pdf,text/plain,text/markdown,text/x-markdown';
 
 // ---------------------------------------------------------------------------
 // mupdf lazy loader — WASM is ~15 MB, only loaded when a file is dropped
@@ -154,6 +159,25 @@ async function extractFromPdf(
   }
 
   return { blocks, numPages };
+}
+
+// ---------------------------------------------------------------------------
+// Plain-text / Markdown extraction (no WASM required)
+// ---------------------------------------------------------------------------
+
+function extractFromText(raw: string): { blocks: ContentBlock[]; numPages: number } {
+  const blocks: ContentBlock[] = raw
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((text, i) => ({
+      type: 'text' as const,
+      subtype: 'paragraph' as const,
+      text,
+      pageNum: 1,
+      id: `b-1-${i}`,
+    }));
+  return { blocks, numPages: 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -350,17 +374,36 @@ function SettingsPanel() {
 // Main page
 // ---------------------------------------------------------------------------
 
+function isTextFile(file: File): boolean {
+  return (
+    file.type === 'text/plain' ||
+    file.type === 'text/markdown' ||
+    file.type === 'text/x-markdown' ||
+    file.name.endsWith('.txt') ||
+    file.name.endsWith('.md')
+  );
+}
+
+function isPdfFile(file: File): boolean {
+  return file.type === 'application/pdf' || file.name.endsWith('.pdf');
+}
+
 export default function PdfTtsPage() {
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [numPages, setNumPages] = useState(0);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // 'pdf' shows per-page cards; 'text' shows a single card with no page header
+  const [sourceType, setSourceType] = useState<'pdf' | 'text' | null>(null);
+
+  // Paste panel state
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   const handleFile = useCallback(async (file: File) => {
-    const supported = SUPPORTED_FILE_TYPES.some((t) => t.mimeType === file.type);
-    if (!supported) {
-      setError(`Unsupported file type "${file.type}". Supported: ${SUPPORTED_FILE_TYPES.map((t) => t.label).join(', ')}.`);
+    if (!isPdfFile(file) && !isTextFile(file)) {
+      setError(`Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map((t) => t.label).join(', ')}.`);
       return;
     }
     setError('');
@@ -368,10 +411,19 @@ export default function PdfTtsPage() {
     setFileName(file.name);
     setBlocks([]);
     try {
-      const buffer = await file.arrayBuffer();
-      const { blocks: extracted, numPages: pages } = await extractFromPdf(buffer);
-      setBlocks(extracted);
-      setNumPages(pages);
+      if (isPdfFile(file)) {
+        const buffer = await file.arrayBuffer();
+        const { blocks: extracted, numPages: pages } = await extractFromPdf(buffer);
+        setBlocks(extracted);
+        setNumPages(pages);
+        setSourceType('pdf');
+      } else {
+        const text = await file.text();
+        const { blocks: extracted, numPages: pages } = extractFromText(text);
+        setBlocks(extracted);
+        setNumPages(pages);
+        setSourceType('text');
+      }
     } catch (e) {
       setError(`Failed to parse file: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -388,6 +440,17 @@ export default function PdfTtsPage() {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
+  }
+
+  function handlePasteLoad() {
+    const trimmed = pasteText.trim();
+    if (!trimmed) return;
+    const { blocks: extracted, numPages: pages } = extractFromText(trimmed);
+    setBlocks(extracted);
+    setNumPages(pages);
+    setSourceType('text');
+    setFileName('');
+    setError('');
   }
 
   const pages = Array.from({ length: numPages }, (_, i) => ({
@@ -419,7 +482,7 @@ export default function PdfTtsPage() {
 
         {/* Drop zone */}
         <div
-          className="mb-8 rounded-lg border-2 border-dashed border-primary/30 bg-paper p-8 text-center transition-colors hover:border-primary/60"
+          className="mb-4 rounded-lg border-2 border-dashed border-primary/30 bg-paper p-8 text-center transition-colors hover:border-primary/60"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
@@ -443,6 +506,38 @@ export default function PdfTtsPage() {
           )}
         </div>
 
+        {/* Paste text — collapsible */}
+        <div className="mb-8 rounded-lg border-2 border-primary/20 bg-paper overflow-hidden">
+          <button
+            onClick={() => setPasteOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-text-secondary hover:bg-primary/5 transition-colors"
+          >
+            <span>📋 Paste Text</span>
+            <span className="text-xs text-text-secondary/60">{pasteOpen ? '▲ collapse' : '▼ expand'}</span>
+          </button>
+
+          {pasteOpen && (
+            <div className="px-4 pb-4 pt-1 border-t border-primary/10">
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder="Paste any text here — paragraphs separated by blank lines will become individual TTS blocks…"
+                rows={8}
+                className="w-full rounded border border-primary/20 bg-background text-text-primary text-sm px-3 py-2 focus:outline-none focus:border-accent-blue resize-y font-mono"
+              />
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={handlePasteLoad}
+                  disabled={!pasteText.trim()}
+                  className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg shadow hover:shadow-md transition-shadow disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Load
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {error && (
           <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -459,14 +554,17 @@ export default function PdfTtsPage() {
           <div className="space-y-6">
             {pages.map(({ pageNum, blocks: pageBlocks }) => (
               <div key={pageNum} className="bg-paper rounded-lg border-2 border-primary/20 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-primary/10">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-text-secondary">
-                    Page {pageNum}
-                  </span>
-                  <span className="text-xs text-text-secondary/60">
-                    {pageBlocks.length} block{pageBlocks.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
+                {/* Only show page header for PDFs — text/paste has no meaningful page concept */}
+                {sourceType === 'pdf' && (
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-primary/10">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-text-secondary">
+                      Page {pageNum}
+                    </span>
+                    <span className="text-xs text-text-secondary/60">
+                      {pageBlocks.length} block{pageBlocks.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
 
                 {pageBlocks.length === 0 ? (
                   <p className="text-xs text-text-secondary italic">No extractable content on this page.</p>
