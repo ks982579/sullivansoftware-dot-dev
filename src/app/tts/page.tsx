@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react';
+import { SullySoftTTS } from '@/lib/ttsStore';
 
 const Tts: React.FC = () => {
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -62,7 +63,7 @@ const Tts: React.FC = () => {
         setPitch(parseFloat(e.target.value));
     };
 
-    const onSpeak = () => {
+    const onSpeak = async () => {
         if (!textSpeech.trim()) {
             alert('Please enter some text to speak');
             return;
@@ -99,7 +100,10 @@ const Tts: React.FC = () => {
         };
 
         utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
+        // window.speechSynthesis.speak(utterance);
+
+        const sullyTTS = await SullySoftTTS.create();
+        sullyTTS.generate(formattedText);
     };
 
     const onPause = () => {

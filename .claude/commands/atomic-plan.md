@@ -83,9 +83,19 @@ Good verbs: Research, Read, Write, Draft, Edit, Create, Delete, Run, Verify, Tes
 
 ## Quality Checks Before Writing
 
-- No step contains two verbs describing two different actions (if it does, split it)
-- Every step has a Why
-- Steps are ordered so that each one can be executed given only the steps before it
-- No step says "implement", "handle", or "deal with" — these are too vague
-- Repo setup or config steps are included if they are prerequisites
-- The checklist could be handed to someone unfamiliar with the task and they could execute it without asking questions
+- No step contains two verbs describing two different actions (if it does, please split it).
+- Every step has a small explanation of why it is required.
+- Steps are ordered so that each one can be executed given only the steps before it.
+- Please write explicit steps; no step says "implement", "handle", or "deal with" — these are too vague.
+- Repo setup or config steps are included if they are prerequisites.
+- The checklist could be handed to someone unfamiliar with the task and they could execute it without asking questions.
+
+## Final Note
+
+Breaking down the plan into atomic executable steps is the main objective of this process.
+For example, if the plan states to implement a solution with a particular algorithm, the correct steps to write would list the steps to write the algorithm so the human understands how the algorithm is being implemented.
+An incorrect write-up would be to list the step as implement said algorithm, and explaining why as per the instructions. 
+
+That said, the explanations of 'why' a step is being done is to help with reasoning, extending thinking, and aid the human during review.
+An example could be if a step is to create a new class with certain properties, then the why might explain no class existed with these features, or the class will be used to decouple the project.
+If an atomic step stems from a direct instruction in the plan, it is alright to list the reason 'why' the step is necessary as "per human instructions". 
