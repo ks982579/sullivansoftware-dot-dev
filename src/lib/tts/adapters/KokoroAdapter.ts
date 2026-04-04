@@ -130,8 +130,9 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
                         options.onError?.(e);
                         resolve();
                     });
-                }))
+                }));
             }
+            playbackDone = true;
         }
 
         const consume = async () => {
