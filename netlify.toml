@@ -13,3 +13,15 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Bundle issues where it exceeds 250MB
+# My code is not for Server anyway
+[functions]
+    included_files = []
+
+[functions."___netlify-server-handler"]
+    excluded_patterns = [
+        "node_modules/kokoro-js/**",
+        "node_modules/onnxruntime-web/**",
+        "node_modules/@huggingface/transformers/**",
+    ]
