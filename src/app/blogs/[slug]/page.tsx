@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
 import MdxContent from "@/components/MdxContent";
+import TTSSettingsPanel from "@/components/TTSSettingsPanel";
+import TTSParagraph from "@/app/notes/components/TTSParagraph";
+import { TTSOl, TTSUl } from "@/app/notes/components/TTSList";
 import Link from "next/link";
 
 interface BlogPostPageProps {
@@ -87,9 +90,12 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           )}
         </header>
 
+        {/* TTS Settings — collapsible panel above content */}
+        <TTSSettingsPanel />
+
         {/* Content */}
         <div className="bg-paper rounded-lg border-2 border-primary/20 p-8 shadow-sm">
-          <MdxContent source={post.content} />
+          <MdxContent source={post.content} components={{ p: TTSParagraph, ul: TTSUl, ol: TTSOl }} />
         </div>
       </article>
     </main>

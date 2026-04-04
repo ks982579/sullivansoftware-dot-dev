@@ -43,11 +43,16 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
     private _tts: KokoroTTS | null = null;
     private _currentAudio: HTMLAudioElement | null = null;
     private _stopped: boolean = false;
+    private _currentOptions: TTSSpeakOptions | null = null;
     private _device: 'webgpu' | 'wasm' | 'cpu' | null = null;
     private _dtype?: 'fp32' | 'fp16' | 'q8' | 'q4f16' | 'q4' = 'q8';
 
     async speak(text: string, options: TTSSpeakOptions): Promise<void> {
-        // Checking if webgpu compatible. 
+        // Reset stop flag so this call runs fully even if stop() was called before
+        this._stopped = false;
+        this._currentOptions = options;
+
+        // Checking if webgpu compatible.
         if (!this._device) {
             this._device = 'wasm';
             if (!!navigator.gpu) {
@@ -187,11 +192,14 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
         */
 
         this._currentAudio = null;
+        this._currentOptions = null;
         if (!this._stopped) options.onEnd?.();
     }
 
     stop(): void {
         this._stopped = true;
+        const opts = this._currentOptions;
+        this._currentOptions = null;
         if (this._currentAudio) {
             this._currentAudio.onended = null;
             this._currentAudio.onerror = null;
@@ -199,8 +207,8 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
             URL.revokeObjectURL(this._currentAudio.src);
             this._currentAudio = null;
         }
-        // this._stopResolve?.();
-        // this._stopResolve = null;
+        // Notify the interrupted caller so its UI (e.g. "speaking…" badge) resets
+        opts?.onError?.(new Error('stopped'));
     }
 
     pause(): void {

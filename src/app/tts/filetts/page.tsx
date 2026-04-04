@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { getTTSSettings, setTTSSettings } from '@/lib/ttsStore';
+import { useCallback, useRef, useState } from 'react';
+import { getTTSSettings } from '@/lib/ttsStore';
+import { getShell } from '@/lib/ttsShell';
+import TTSSettingsPanel from '@/components/TTSSettingsPanel';
 
 // ---------------------------------------------------------------------------
 // Supported file types — extend this list as new parsers are added
@@ -190,23 +192,24 @@ function TtsTextBlock({ block }: { block: TextContentBlock }) {
   const ref = useRef<HTMLElement>(null);
   const active = hovered || speaking;
 
-  function handleStart() {
+  async function handleStart() {
     const text = ref.current?.textContent?.trim() ?? '';
     if (!text) return;
-    window.speechSynthesis.cancel();
-    const { voice, rate, pitch } = getTTSSettings();
-    const utt = new SpeechSynthesisUtterance(text);
-    if (voice) utt.voice = voice;
-    utt.rate = rate;
-    utt.pitch = pitch;
-    utt.onstart = () => setSpeaking(true);
-    utt.onend = () => setSpeaking(false);
-    utt.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(utt);
+    const { voiceId, rate, pitch } = getTTSSettings();
+    const shell = await getShell();
+    shell.stop();
+    shell.speak(text, {
+      voiceId: voiceId ?? '',
+      speed: rate,
+      pitch,
+      onStart: () => setSpeaking(true),
+      onEnd: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    });
   }
 
   function handleStop() {
-    window.speechSynthesis.cancel();
+    getShell().then((shell) => shell.stop());
     setSpeaking(false);
   }
 
@@ -290,85 +293,6 @@ function TtsTextBlock({ block }: { block: TextContentBlock }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// TTS settings panel (self-contained, writes to ttsStore)
-// ---------------------------------------------------------------------------
-
-function SettingsPanel() {
-  const [open, setOpen] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceName, setSelectedVoiceName] = useState('');
-  const [rate, setRate] = useState(1);
-  const [pitch, setPitch] = useState(1);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    const load = () => {
-      if (loadedRef.current) return;
-      const available = window.speechSynthesis.getVoices();
-      if (!available.length) return;
-      loadedRef.current = true;
-      setVoices(available);
-      const def = available.find((v) => v.lang.startsWith('en')) ?? available[0];
-      setSelectedVoiceName(def.name);
-      setTTSSettings({ voice: def, rate: 1, pitch: 1 });
-    };
-    load();
-    window.speechSynthesis.onvoiceschanged = load;
-    return () => { window.speechSynthesis.onvoiceschanged = null; };
-  }, []);
-
-  return (
-    <div className="mb-6 rounded-lg border-2 border-accent-blue/20 bg-paper overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-accent-blue hover:bg-accent-blue/5 transition-colors"
-      >
-        <span>🔊 Text-to-Speech Settings</span>
-        <span className="text-xs text-text-secondary">{open ? '▲ collapse' : '▼ expand'}</span>
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-accent-blue/10 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Voice</label>
-            <select
-              value={selectedVoiceName}
-              onChange={(e) => {
-                const v = voices.find((v) => v.name === e.target.value) ?? null;
-                setSelectedVoiceName(e.target.value);
-                setTTSSettings({ voice: v });
-              }}
-              className="rounded border border-primary/20 bg-background text-text-primary px-2 py-1.5 text-sm focus:outline-none focus:border-accent-blue"
-            >
-              {voices.map((v) => (
-                <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-              Rate — {rate.toFixed(1)}×
-            </label>
-            <input type="range" min="0.1" max="2" step="0.1" value={rate}
-              onChange={(e) => { const v = parseFloat(e.target.value); setRate(v); setTTSSettings({ rate: v }); }}
-              className="accent-accent-blue" />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-              Pitch — {pitch.toFixed(1)}
-            </label>
-            <input type="range" min="0.1" max="2" step="0.1" value={pitch}
-              onChange={(e) => { const v = parseFloat(e.target.value); setPitch(v); setTTSSettings({ pitch: v }); }}
-              className="accent-accent-blue" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main page
@@ -478,7 +402,7 @@ export default function PdfTtsPage() {
           </p>
         </div>
 
-        <SettingsPanel />
+        <TTSSettingsPanel />
 
         {/* Drop zone */}
         <div

@@ -72,7 +72,8 @@ src/
 ├── components/              # Reusable components
 │   ├── Footer.tsx           # Site footer with social links
 │   ├── ThemeProvider.tsx    # MUI theme provider wrapper
-│   └── MdxContent.tsx       # MDX content renderer with KaTeX support
+│   ├── MdxContent.tsx       # MDX content renderer with KaTeX support
+│   └── TTSSettingsPanel.tsx # Shared TTS settings panel (voice/rate/pitch); used by Notes, pdftts, blogs
 ├── lib/                     # Utility functions
 │   ├── blog.ts             # Blog post file-based data layer
 │   ├── notes.ts            # Notes file-based data layer (nested structure)
@@ -81,7 +82,18 @@ src/
 │   ├── useQuizzes.ts       # Custom React hook for quiz CRUD operations
 │   ├── quizTypes.ts        # TypeScript interfaces for Quiz, Questions, Answers, Templates
 │   ├── quizTemplates.ts    # Server-side reader for quiz template JSON files
-│   └── ttsStore.ts         # Module-level singleton for shared TTS voice/rate/pitch state
+│   ├── ttsStore.ts         # Module-level singleton for shared TTS settings (voiceId, rate, pitch) — all TTS pages
+│   ├── ttsShell.ts         # Module-level lazy singleton: getShell() → shared TTSShell across all pages
+│   └── tts/                # TTS service layer
+│       ├── ITTSAdapter.ts          # ITTSAdapter, TTSSpeakOptions, IVoiceProvider interfaces
+│       ├── TTSShell.ts             # Public API — delegates to active adapter, selectVoice() switches provider
+│       ├── TTSFactory.ts           # Static async factory — constructs a ready TTSShell
+│       ├── adapters/
+│       │   ├── BrowserAdapter.ts   # Wraps window.speechSynthesis; handles sync/async voice loading
+│       │   └── KokoroAdapter.ts    # Wraps kokoro-js; WebGPU detection, streaming audio via produce/consume queue
+│       └── voices/
+│           ├── ITTSVoice.ts        # Shared voice type (id, name, provider, lang)
+│           └── VoiceRegistry.ts    # Aggregates voices from registered IVoiceProvider instances
 ├── theme/                   # Design system
 │   ├── theme.ts            # MUI theme definition (Japanese Retro)
 │   └── README.md           # Theme documentation
@@ -165,22 +177,40 @@ src/
   - **TTS Settings panel:** collapsible panel above the content card with voice selector, rate slider, and pitch slider; settings apply to all blocks on the page via `ttsStore.ts`
 - Architecture: Server component for data fetching, client components for interactivity and TTS
 - TTS implementation files:
-  - `src/lib/ttsStore.ts` — module-level singleton (`voice`, `rate`, `pitch`); avoids React Context issues across the RSC/client boundary
-  - `src/app/notes/components/TTSSettings.tsx` — collapsible settings panel; loads voices async via `onvoiceschanged`, writes to store
-  - `src/app/notes/components/TTSParagraph.tsx` — wraps MDX `<p>` elements; reads `textContent` via DOM ref at click time
-  - `src/app/notes/components/TTSList.tsx` — wraps MDX `<ul>` and `<ol>` elements; exports `TTSOl` and `TTSUl` named components
+  - `src/lib/ttsStore.ts` — module-level singleton (`voiceId`, `rate`, `pitch`); avoids React Context issues across the RSC/client boundary
+  - `src/lib/ttsShell.ts` — module-level lazy singleton (`getShell()`) returning the shared `TTSShell`; all block components call this instead of touching browser APIs directly
+  - `src/components/TTSSettingsPanel.tsx` — canonical shared settings panel; loads voices from the registry (browser + Kokoro), calls `shell.selectVoice()` + writes to store; also used by pdftts and blog pages
+  - `src/app/notes/components/TTSSettings.tsx` — one-line re-export of `TTSSettingsPanel` for backward compatibility
+  - `src/app/notes/components/TTSParagraph.tsx` — wraps MDX `<p>` elements; calls `getShell()` + `shell.speak()/stop()` on click
+  - `src/app/notes/components/TTSList.tsx` — wraps MDX `<ul>` and `<ol>` elements (exports `TTSOl`, `TTSUl`); same shell integration as TTSParagraph
   - `src/components/MdxContent.tsx` accepts optional `components` prop (`MDXRemoteProps["components"]`) so any page can inject custom element renderers
 
 **Text-to-Speech Tools (Browser-based):**
 
 `/tts` — Manual TTS (`src/app/tts/page.tsx`):
-- Uses browser's Web Speech API (`window.speechSynthesis`)
-- SSR-safe implementation with proper `useEffect` hooks
-- Features: voice selection, adjustable rate (0.1×–2×) and pitch, full playback controls, PDF text cleanup utilities
+- Uses its own local `TTSShell` ref (from `TTSFactory.create()`) rather than the shared singleton, since this page manages its own full playback controls (pause/resume)
+- Provider-agnostic; the page calls only `TTSShell` — never a browser or Kokoro API directly
+- Voice dropdown lists both browser and Kokoro AI voices; selecting a voice activates the matching adapter via `shell.selectVoice(voice)`
+- Pitch slider is visually disabled when a Kokoro voice is selected (Kokoro ignores pitch)
 - Two text processing modes:
   - **Copy Cleaned Text**: Removes hyphenated line breaks (`-\n`) and normalizes newlines for general use
   - **Speech Processing** (`_fmtTextForSpeech`): Strips square bracket references, handles double underscores
 - Styled with Japanese Retro theme
+
+**TTS Service Layer (`src/lib/tts/`):**
+- `TTSFactory.create()` — static async factory; constructs `BrowserAdapter`, `KokoroAdapter`, `VoiceRegistry` (both registered), returns a `TTSShell`
+- `TTSShell` — single stable API the page uses; `selectVoice(voice)` infers provider and calls `setAdapter()`; `speak/stop/pause/resume` delegate to the active adapter
+- `BrowserAdapter` — wraps `window.speechSynthesis`; `loadVoices()` tries `getVoices()` synchronously then falls back to `onvoiceschanged` (cross-browser safe)
+- `KokoroAdapter` — wraps `kokoro-js`; lazy model load on first `speak()`:
+  - Detects WebGPU via `navigator.gpu.requestAdapter()` and uses `device: "webgpu", dtype: "fp32"` if available; falls back to `device: "wasm", dtype: "q8"`
+  - Uses `TextSplitterStream` + `tts.stream()` to process text sentence-by-sentence, enabling long paragraphs without timeout
+  - Produce/consume queue pattern: `produce()` iterates the async stream and pushes blob-URL playback functions onto `audioQueue`; `consume()` plays them sequentially; both run concurrently via `Promise.all` so the next chunk is being synthesised while the current one plays
+  - `stop()` sets `_stopped = true` (breaks the produce loop) and pauses any current `HTMLAudioElement`
+  - Voice list is a hardcoded static array — no model load required just to populate the dropdown
+- `VoiceRegistry` — aggregates voices from registered `IVoiceProvider` instances; adding a third TTS provider is a one-line `registry.register()` call
+- `ttsStore.ts` stores `voiceId: string | null`, `rate`, `pitch` — shared by all block components (Notes paragraphs/lists, pdftts blocks, blog paragraphs/lists); it does not import the service layer
+- `ttsShell.ts` provides a single shared `TTSShell` via `getShell()` — block components call `shell.stop()` before `shell.speak()` so only one block can speak at a time; stopping a block triggers its `onError` callback to reset the "speaking…" badge
+- **Blog pages** now include `<TTSSettingsPanel />` and pass `{ p: TTSParagraph, ul: TTSUl, ol: TTSOl }` to `<MdxContent>`, giving blog post readers the same hover-to-speak experience as Notes pages
 
 `/tts/pdftts` — Document TTS (`src/app/tts/pdftts/page.tsx`):
 - Generic file-type architecture: `SUPPORTED_FILE_TYPES` constant at top of file — add new parsers by extending it
@@ -597,6 +627,8 @@ Target modern browsers (Chrome, Firefox, Safari, Edge) that support:
 
 ## Recent Updates
 
+- **TTS integration — Notes, pdftts, blogs (April 2026):** Extended the TTS service layer to all reading pages. A new `src/lib/ttsShell.ts` module-level singleton (`getShell()`) provides a single shared `TTSShell` across Notes, pdftts, and blog pages — clicking Start on any block stops whatever is currently playing. The duplicate `SettingsPanel` in pdftts was removed; the Notes `TTSSettings.tsx` component was replaced by a canonical `src/components/TTSSettingsPanel.tsx` that loads both browser and Kokoro voices from the registry and disables the pitch control for AI voices. `ttsStore.ts` was updated to store `voiceId: string | null` instead of the browser-specific `SpeechSynthesisVoice`. Blog post pages now render with `TTSSettingsPanel` and hover-to-speak on all paragraphs and lists, matching the Notes experience. `KokoroAdapter` was also fixed: `_stopped` flag is now reset at the start of each `speak()` call, and `stop()` notifies the interrupted caller via `onError` so UI badges reset correctly.
+- **TTS Service Layer — `/src/lib/tts/` (April 2026):** Decoupled all TTS logic from `/src/app/tts/page.tsx` into a provider-agnostic service layer. `TTSFactory.create()` returns a `TTSShell` backed by a `BrowserAdapter` (wraps `window.speechSynthesis`) and a `KokoroAdapter` (wraps `kokoro-js`). The active adapter is chosen lazily when the user selects a voice. `KokoroAdapter` detects WebGPU at runtime (falls back to WASM), loads the model lazily on first `speak()`, and uses a streaming produce/consume queue to handle long paragraphs without timeout. `ttsStore.ts` was stripped to settings-only — the `SullySoftTTS` proof-of-concept class was removed. The `/tts` page now lists both browser and Kokoro voices; pitch control is disabled when a Kokoro voice is selected.
 - **Document TTS page — mupdf rewrite (April 2026):** Replaced `pdfjs-dist` with `mupdf` (MuPDF.js v1.27) for proper structured extraction. The page now uses MuPDF's `StructuredText` walker to get MuPDF's own paragraph boundaries, per-character font metadata (`.isMono()` for code detection, `size` for headings), and inline image extraction (`image.toPixmap().asPNG()` → base64). `next.config.ts` updated with `asyncWebAssembly: true`, `NormalModuleReplacementPlugin` to strip `node:` prefixes, and `resolve.fallback` to stub out Node.js built-ins in browser builds. Page is now a generic multi-file-type architecture controlled by a `SUPPORTED_FILE_TYPES` constant. `pdfjs-dist` package remains installed but is no longer used by this page.
 - **Notes TTS — list support (April 2026):** Extended per-block TTS in the Notes feature to cover `<ul>` and `<ol>` elements in addition to paragraphs. `TTSList.tsx` contains a shared `TTSList` component parameterised by tag, exporting `TTSOl` and `TTSUl`. Both are passed via the `components` prop to `MdxContent` alongside `TTSParagraph`.
 - **Notes per-block Text-to-Speech (April 2026):** Added hover-activated TTS to every note page. Hovering a paragraph, unordered list, or ordered list shows a dark-purple glowing border and ▶ Start / ■ Stop buttons beneath the block. A collapsible "Text-to-Speech Settings" panel above the content card exposes voice, rate, and pitch controls. State is shared between the settings panel and paragraph/list components via a module-level singleton (`src/lib/ttsStore.ts`) — this sidesteps the React Context / RSC boundary issue that arises when `MDXRemote` (server-only) and interactive client components must share state. `MdxContent` was updated to accept an optional `components` prop so the pattern can be reused elsewhere.

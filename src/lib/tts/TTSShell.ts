@@ -24,7 +24,10 @@ export class TTSShell {
     }
 
     async speak(text: string, options: TTSSpeakOptions): Promise<void> {
-        if (!this._adapter) throw new Error("No TTS adapter selected. Select a voice first.");
+        if (!this._adapter) {
+            options.onError?.(new Error("No TTS adapter selected. Choose a voice in the TTS settings panel."));
+            return;
+        }
         return this._adapter.speak(text, options);
     }
 

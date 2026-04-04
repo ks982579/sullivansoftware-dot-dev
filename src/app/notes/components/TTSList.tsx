@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { getTTSSettings } from '@/lib/ttsStore';
+import { getShell } from '@/lib/ttsShell';
 
 interface TTSListProps {
   tag: 'ul' | 'ol';
@@ -13,27 +14,26 @@ function TTSList({ tag: Tag, children }: TTSListProps) {
   const [speaking, setSpeaking] = useState(false);
   const listRef = useRef<HTMLElement>(null);
 
-  function handleStart() {
+  async function handleStart() {
     const text = listRef.current?.textContent?.trim() ?? '';
     if (!text) return;
 
-    window.speechSynthesis.cancel();
-
-    const { voice, rate, pitch } = getTTSSettings();
-    const utterance = new SpeechSynthesisUtterance(text);
-    if (voice) utterance.voice = voice;
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
+    const { voiceId, rate, pitch } = getTTSSettings();
+    const shell = await getShell();
+    // Stop whatever is currently playing (resets the previous block's speaking state via onError)
+    shell.stop();
+    shell.speak(text, {
+      voiceId: voiceId ?? '',
+      speed: rate,
+      pitch,
+      onStart: () => setSpeaking(true),
+      onEnd: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    });
   }
 
   function handleStop() {
-    window.speechSynthesis.cancel();
+    getShell().then((shell) => shell.stop());
     setSpeaking(false);
   }
 
