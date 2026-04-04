@@ -51,6 +51,7 @@ export class SullySoftTTS implements ISullySoftTTS {
         return new SullySoftTTS(tts);
     }
 
+    // When saved, the audio file downloads but each sentence to the browser. 
     async generate(text: string): Promise<void> {
         // Setting up stream
         const stream = this.tts.stream(this.splitter);
@@ -75,4 +76,6 @@ export class SullySoftTTS implements ISullySoftTTS {
 
         // Could use splitter.flush(); if you want to keep stream open
     }
+
+
 }
