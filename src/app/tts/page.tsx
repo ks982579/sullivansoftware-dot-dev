@@ -1,53 +1,45 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react';
-import { SullySoftTTS } from '@/lib/ttsStore';
+import { TTSFactory } from '@/lib/tts/TTSFactory';
+import type { TTSShell } from '@/lib/tts/TTSShell';
+import type { ITTSVoice } from '@/lib/tts/voices/ITTSVoice';
 
 const Tts: React.FC = () => {
-    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-    const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+    const [voices, setVoices] = useState<ITTSVoice[]>([]);
+    const [selectedVoice, setSelectedVoice] = useState<ITTSVoice | null>(null);
     const [textSpeech, setTextSpeech] = useState('');
     const [rate, setRate] = useState(1);
     const [pitch, setPitch] = useState(1);
     const [isPaused, setIsPaused] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
-    const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-    const voicesLoadedRef = useRef(false);
+    const shellRef = useRef<TTSShell | null>(null);
 
-    // Load voices after component mounts (SSR-safe)
+    // Initialise the TTS service and load voices (browser + Kokoro) on mount
     useEffect(() => {
-        const loadVoices = () => {
-            if (!voicesLoadedRef.current && typeof window !== 'undefined') {
-                const availableVoices = window.speechSynthesis.getVoices();
-                if (availableVoices.length > 0) {
-                    setVoices(availableVoices);
-                    // Set default voice (prefer English voices)
-                    const defaultVoice = availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
-                    setSelectedVoice(defaultVoice);
-                    voicesLoadedRef.current = true;
-                }
+        TTSFactory.create().then(async (shell) => {
+            shellRef.current = shell;
+            const allVoices = await shell.getRegistry().loadVoices();
+            setVoices(allVoices);
+
+            // Default to the first English browser voice, or the first voice available
+            const defaultVoice =
+                allVoices.find(v => v.provider === "browser" && v.lang?.startsWith("en")) ??
+                allVoices[0] ??
+                null;
+
+            if (defaultVoice) {
+                setSelectedVoice(defaultVoice);
+                shell.selectVoice(defaultVoice);
             }
-        };
-
-        // Initial load
-        loadVoices();
-
-        // Listen for voices changed event (some browsers load voices asynchronously)
-        if (typeof window !== 'undefined') {
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-        }
-
-        return () => {
-            if (typeof window !== 'undefined') {
-                window.speechSynthesis.onvoiceschanged = null;
-            }
-        };
+        });
     }, []);
 
     const handleVoiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const voice = voices.find(v => v.name === e.target.value);
+        const voice = voices.find(v => v.id === e.target.value);
         if (voice) {
             setSelectedVoice(voice);
+            shellRef.current?.selectVoice(voice);
         }
     };
 
@@ -63,69 +55,42 @@ const Tts: React.FC = () => {
         setPitch(parseFloat(e.target.value));
     };
 
-    const onSpeak = async () => {
-        if (!textSpeech.trim()) {
-            alert('Please enter some text to speak');
+    const onSpeak = () => {
+        if (!textSpeech.trim() || !selectedVoice || !shellRef.current) {
+            if (!textSpeech.trim()) alert('Please enter some text to speak');
             return;
         }
 
-        if (typeof window === 'undefined') return;
-
-        // Stop any ongoing speech
-        window.speechSynthesis.cancel();
-
-        // Format text for speech (removes PDF artifacts, references, etc.)
         const formattedText = _fmtTextForSpeech(textSpeech);
 
-        // Create new utterance
-        const utterance = new SpeechSynthesisUtterance(formattedText);
-        utterance.voice = selectedVoice;
-        utterance.rate = rate;
-        utterance.pitch = pitch;
-
-        utterance.onstart = () => {
-            setIsSpeaking(true);
-            setIsPaused(false);
-        };
-
-        utterance.onend = () => {
-            setIsSpeaking(false);
-            setIsPaused(false);
-        };
-
-        utterance.onerror = (event) => {
-            console.error('Speech synthesis error:', event);
-            setIsSpeaking(false);
-            setIsPaused(false);
-        };
-
-        utteranceRef.current = utterance;
-        // window.speechSynthesis.speak(utterance);
-
-        const sullyTTS = await SullySoftTTS.create();
-        sullyTTS.generate(formattedText);
+        shellRef.current.speak(formattedText, {
+            voiceId: selectedVoice.id,
+            speed: rate,
+            pitch,
+            onStart: () => { setIsSpeaking(true); setIsPaused(false); },
+            onEnd: () => { setIsSpeaking(false); setIsPaused(false); },
+            onError: () => { setIsSpeaking(false); setIsPaused(false); },
+        });
     };
 
     const onPause = () => {
-        if (typeof window !== 'undefined' && isSpeaking && !isPaused) {
-            window.speechSynthesis.pause();
+        if (isSpeaking && !isPaused) {
+            shellRef.current?.pause();
             setIsPaused(true);
         }
     };
 
     const onResume = () => {
-        if (typeof window !== 'undefined' && isSpeaking && isPaused) {
-            window.speechSynthesis.resume();
+        if (isSpeaking && isPaused) {
+            shellRef.current?.resume();
             setIsPaused(false);
         }
     };
 
     const onStop = () => {
-        if (typeof window !== 'undefined') {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-            setIsPaused(false);
-        }
+        shellRef.current?.stop();
+        setIsSpeaking(false);
+        setIsPaused(false);
     };
 
     const copyText = () => {
@@ -161,6 +126,8 @@ const Tts: React.FC = () => {
         }
     };
 
+    const isKokoro = selectedVoice?.provider === "kokoro";
+
     return (
         <main className="min-h-screen bg-background py-12 px-4">
             <div className="max-w-4xl mx-auto">
@@ -168,7 +135,7 @@ const Tts: React.FC = () => {
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-4xl font-bold text-secondary mb-2">Text-to-Speech</h1>
-                        <p className="text-text-secondary">Convert text to speech using your browser&apos;s built-in voices</p>
+                        <p className="text-text-secondary">Convert text to speech using your browser&apos;s built-in voices or Kokoro AI</p>
                     </div>
 
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
@@ -179,7 +146,7 @@ const Tts: React.FC = () => {
                             </label>
                             <select
                                 id="voices"
-                                value={selectedVoice?.name || ''}
+                                value={selectedVoice?.id || ''}
                                 onChange={handleVoiceChange}
                                 className="w-full px-4 py-2 border-2 border-primary/30 rounded-lg bg-background focus:border-primary focus:outline-none transition-colors"
                             >
@@ -187,8 +154,8 @@ const Tts: React.FC = () => {
                                     <option>Loading voices...</option>
                                 ) : (
                                     voices.map((voice) => (
-                                        <option key={voice.name} value={voice.name}>
-                                            {voice.name} ({voice.lang})
+                                        <option key={voice.id} value={voice.id}>
+                                            {voice.name} [{voice.provider}] ({voice.lang ?? ''})
                                         </option>
                                     ))
                                 )}
@@ -216,10 +183,10 @@ const Tts: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Pitch Control */}
-                        <div>
+                        {/* Pitch Control — browser voices only */}
+                        <div className={isKokoro ? 'opacity-40 pointer-events-none' : ''}>
                             <label htmlFor="pitch" className="block text-sm font-semibold text-text-primary mb-2">
-                                Pitch: {pitch.toFixed(1)}
+                                Pitch: {pitch.toFixed(1)}{isKokoro ? ' (not supported by Kokoro)' : ''}
                             </label>
                             <div className="flex items-center gap-4">
                                 <span className="text-sm text-text-secondary">0.1</span>
@@ -231,6 +198,7 @@ const Tts: React.FC = () => {
                                     step="0.1"
                                     id="pitch"
                                     onChange={handlePitchChange}
+                                    disabled={isKokoro}
                                     className="flex-1 h-2 bg-primary/20 rounded-lg appearance-none cursor-pointer accent-primary"
                                 />
                                 <span className="text-sm text-text-secondary">2</span>
@@ -330,15 +298,16 @@ const Tts: React.FC = () => {
                     <h2 className="text-2xl font-bold text-secondary mb-4">About This Tool</h2>
                     <div className="space-y-3 text-text-primary">
                         <p>
-                            This text-to-speech tool uses your browser&apos;s built-in speech synthesis API,
-                            with special features for cleaning up text copied from PDFs.
+                            This text-to-speech tool uses your browser&apos;s built-in speech synthesis API or the
+                            Kokoro AI model, with special features for cleaning up text copied from PDFs.
                         </p>
                         <div>
                             <h3 className="font-semibold text-primary mb-1">Features:</h3>
                             <ul className="list-disc list-inside space-y-1 text-sm text-text-secondary ml-4">
-                                <li>Multiple voices with different languages and accents</li>
+                                <li>Browser voices with different languages and accents</li>
+                                <li>Kokoro AI voices (loaded on first use — runs 100% in your browser)</li>
                                 <li>Adjustable speech rate (0.1x to 2x speed)</li>
-                                <li>Adjustable pitch (0.1 to 2)</li>
+                                <li>Adjustable pitch (0.1 to 2, browser voices only)</li>
                                 <li>Pause, resume, and stop controls</li>
                                 <li>PDF text cleanup (removes hyphenated line breaks and extra newlines)</li>
                                 <li>Smart speech formatting (removes references, handles underscores)</li>

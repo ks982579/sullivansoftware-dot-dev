@@ -69,3 +69,11 @@ However, I founds MUI, and am making the move before it's too late.
 ---
 
 [Follow guide for NerdFonts and NeoVim development](https://gist.github.com/roopaish/e6ce7f9eb91634684d47e86d19e3e461)
+
+I added:
+
+```bash
+bun add -d @webgpu/types
+```
+
+This is because the new Text-to-speech checks for webgpu but it is a little newer, so not fully supported in my older TS version. 
