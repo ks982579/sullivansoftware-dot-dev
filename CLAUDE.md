@@ -46,8 +46,8 @@ src/
 │   │       └── TTSList.tsx             # Hoverable <ul>/<ol> wrapper with TTS start/stop (client)
 │   ├── /tts                 # Text-to-speech utility tools
 │   │   ├── page.tsx         # TTS interface with PDF text cleanup
-│   │   └── /pdftts
-│   │       └── page.tsx     # PDF import → text extraction → per-paragraph TTS
+│   │   └── /filetts
+│   │       └── page.tsx     # File import → text extraction → per-paragraph TTS (PDF via mupdf)
 │   ├── /todo                # Todo list feature (Projects/Epics/Stories/Tasks)
 │   │   ├── page.tsx
 │   │   ├── PROJECT.md       # Feature documentation
@@ -179,7 +179,7 @@ src/
 - TTS implementation files:
   - `src/lib/ttsStore.ts` — module-level singleton (`voiceId`, `rate`, `pitch`); avoids React Context issues across the RSC/client boundary
   - `src/lib/ttsShell.ts` — module-level lazy singleton (`getShell()`) returning the shared `TTSShell`; all block components call this instead of touching browser APIs directly
-  - `src/components/TTSSettingsPanel.tsx` — canonical shared settings panel; loads voices from the registry (browser + Kokoro), calls `shell.selectVoice()` + writes to store; also used by pdftts and blog pages
+  - `src/components/TTSSettingsPanel.tsx` — canonical shared settings panel; loads voices from the registry (browser + Kokoro), calls `shell.selectVoice()` + writes to store; also used by filetts and blog pages
   - `src/app/notes/components/TTSSettings.tsx` — one-line re-export of `TTSSettingsPanel` for backward compatibility
   - `src/app/notes/components/TTSParagraph.tsx` — wraps MDX `<p>` elements; calls `getShell()` + `shell.speak()/stop()` on click
   - `src/app/notes/components/TTSList.tsx` — wraps MDX `<ul>` and `<ol>` elements (exports `TTSOl`, `TTSUl`); same shell integration as TTSParagraph
@@ -208,11 +208,11 @@ src/
   - `stop()` sets `_stopped = true` (breaks the produce loop) and pauses any current `HTMLAudioElement`
   - Voice list is a hardcoded static array — no model load required just to populate the dropdown
 - `VoiceRegistry` — aggregates voices from registered `IVoiceProvider` instances; adding a third TTS provider is a one-line `registry.register()` call
-- `ttsStore.ts` stores `voiceId: string | null`, `rate`, `pitch` — shared by all block components (Notes paragraphs/lists, pdftts blocks, blog paragraphs/lists); it does not import the service layer
+- `ttsStore.ts` stores `voiceId: string | null`, `rate`, `pitch` — shared by all block components (Notes paragraphs/lists, filetts blocks, blog paragraphs/lists); it does not import the service layer
 - `ttsShell.ts` provides a single shared `TTSShell` via `getShell()` — block components call `shell.stop()` before `shell.speak()` so only one block can speak at a time; stopping a block triggers its `onError` callback to reset the "speaking…" badge
 - **Blog pages** now include `<TTSSettingsPanel />` and pass `{ p: TTSParagraph, ul: TTSUl, ol: TTSOl }` to `<MdxContent>`, giving blog post readers the same hover-to-speak experience as Notes pages
 
-`/tts/pdftts` — Document TTS (`src/app/tts/pdftts/page.tsx`):
+`/tts/filetts` — Document TTS (`src/app/tts/filetts/page.tsx`):
 - Generic file-type architecture: `SUPPORTED_FILE_TYPES` constant at top of file — add new parsers by extending it
 - Currently supports: **PDF** (via `mupdf` WASM)
 - Imports a file entirely client-side (no server involvement) via drag-and-drop or file picker
@@ -220,14 +220,14 @@ src/
   - WASM (~15 MB) is lazy-loaded only when a file is dropped — no cost on page load
   - `mupdf.js` uses a top-level `await` so `await import('mupdf')` fully initialises the WASM automatically
   - `next.config.ts` sets `experiments.asyncWebAssembly: true` and uses `NormalModuleReplacementPlugin` to strip `node:` prefixes + `resolve.fallback` to map Node.js built-ins to empty in browser builds (mupdf has conditional Node.js code paths that webpack analyses statically)
-- Text extracted via `StructuredText.walk()` walker — MuPDF's own paragraph grouping (not a gap heuristic):
-  - `beginTextBlock` / `endTextBlock` = paragraph boundaries
-  - `onChar` per-character `font.isMono()` → code block detection (threshold: > 80% mono chars)
-  - `onChar` `size` → heading detection (≥ 14 pt); level: h1 ≥ 24 pt, h2 ≥ 18 pt, h3 ≥ 14 pt
+- Text extracted via `StructuredText.walk()` walker with a **median-spacing paragraph heuristic**:
+  - `beginTextBlock` / `endTextBlock` = MuPDF's block boundaries (often an entire column of body text)
+  - `beginLine(bbox)` captures each line's y-coordinates (`bbox[1]`, `bbox[3]`)
+  - `onChar` per-character: `font.isMono()` → code detection (threshold: > 80% mono chars); `size` → heading detection (≥ 14 pt); h1/h2/h3 at 24/18/14 pt
+  - `endTextBlock` computes midpoint-to-midpoint spacings between consecutive lines, finds the **median** spacing, and splits at any gap ≥ 1.5× median — this is the paragraph boundary heuristic (adaptive to single-, 1.5×-, and double-spaced documents)
   - `onImageBlock` → `image.toPixmap().asPNG()` → base64 `data:image/png` rendered inline
 - Content block types: `paragraph` (TTS hover), `heading` (bold/sized, TTS hover), `code` (monospace dark bg, TTS hover), `image` (inline `<img>`, no TTS)
-- TTS settings panel (voice / rate / pitch) at top of page writes to shared `ttsStore.ts` singleton
-- Self-contained: settings panel and `TtsTextBlock` component defined inline in the page file
+- TTS settings panel uses shared `<TTSSettingsPanel />` component; `TtsTextBlock` calls `getShell()` for playback — fully integrated with the TTS service layer
 
 **Quiz Application (localStorage-based):**
 - Located at `/quiz-app` route with create, edit, and take sub-routes
@@ -627,7 +627,8 @@ Target modern browsers (Chrome, Firefox, Safari, Edge) that support:
 
 ## Recent Updates
 
-- **TTS integration — Notes, pdftts, blogs (April 2026):** Extended the TTS service layer to all reading pages. A new `src/lib/ttsShell.ts` module-level singleton (`getShell()`) provides a single shared `TTSShell` across Notes, pdftts, and blog pages — clicking Start on any block stops whatever is currently playing. The duplicate `SettingsPanel` in pdftts was removed; the Notes `TTSSettings.tsx` component was replaced by a canonical `src/components/TTSSettingsPanel.tsx` that loads both browser and Kokoro voices from the registry and disables the pitch control for AI voices. `ttsStore.ts` was updated to store `voiceId: string | null` instead of the browser-specific `SpeechSynthesisVoice`. Blog post pages now render with `TTSSettingsPanel` and hover-to-speak on all paragraphs and lists, matching the Notes experience. `KokoroAdapter` was also fixed: `_stopped` flag is now reset at the start of each `speak()` call, and `stop()` notifies the interrupted caller via `onError` so UI badges reset correctly.
+- **filetts paragraph detection — median spacing heuristic (April 2026):** Fixed paragraph detection in `/tts/filetts`. MuPDF groups entire text columns into a single text block, so the old one-block-per-MuPDF-block logic produced one giant paragraph for all body text. The fix: `beginLine(bbox)` captures each line's y-coordinates; `endTextBlock` computes midpoint-to-midpoint spacings between consecutive lines, finds the **median** spacing, and treats any gap ≥ 1.5× median as a paragraph boundary. This approach is adaptive — it works correctly for single-, 1.5×-, and double-spaced documents without any hard-coded point thresholds. The page was also renamed from `pdftts` to `filetts` to reflect its generic file-type architecture.
+- **TTS integration — Notes, filetts, blogs (April 2026):** Extended the TTS service layer to all reading pages. A new `src/lib/ttsShell.ts` module-level singleton (`getShell()`) provides a single shared `TTSShell` across Notes, pdftts, and blog pages — clicking Start on any block stops whatever is currently playing. The duplicate `SettingsPanel` in pdftts was removed; the Notes `TTSSettings.tsx` component was replaced by a canonical `src/components/TTSSettingsPanel.tsx` that loads both browser and Kokoro voices from the registry and disables the pitch control for AI voices. `ttsStore.ts` was updated to store `voiceId: string | null` instead of the browser-specific `SpeechSynthesisVoice`. Blog post pages now render with `TTSSettingsPanel` and hover-to-speak on all paragraphs and lists, matching the Notes experience. `KokoroAdapter` was also fixed: `_stopped` flag is now reset at the start of each `speak()` call, and `stop()` notifies the interrupted caller via `onError` so UI badges reset correctly.
 - **TTS Service Layer — `/src/lib/tts/` (April 2026):** Decoupled all TTS logic from `/src/app/tts/page.tsx` into a provider-agnostic service layer. `TTSFactory.create()` returns a `TTSShell` backed by a `BrowserAdapter` (wraps `window.speechSynthesis`) and a `KokoroAdapter` (wraps `kokoro-js`). The active adapter is chosen lazily when the user selects a voice. `KokoroAdapter` detects WebGPU at runtime (falls back to WASM), loads the model lazily on first `speak()`, and uses a streaming produce/consume queue to handle long paragraphs without timeout. `ttsStore.ts` was stripped to settings-only — the `SullySoftTTS` proof-of-concept class was removed. The `/tts` page now lists both browser and Kokoro voices; pitch control is disabled when a Kokoro voice is selected.
 - **Document TTS page — mupdf rewrite (April 2026):** Replaced `pdfjs-dist` with `mupdf` (MuPDF.js v1.27) for proper structured extraction. The page now uses MuPDF's `StructuredText` walker to get MuPDF's own paragraph boundaries, per-character font metadata (`.isMono()` for code detection, `size` for headings), and inline image extraction (`image.toPixmap().asPNG()` → base64). `next.config.ts` updated with `asyncWebAssembly: true`, `NormalModuleReplacementPlugin` to strip `node:` prefixes, and `resolve.fallback` to stub out Node.js built-ins in browser builds. Page is now a generic multi-file-type architecture controlled by a `SUPPORTED_FILE_TYPES` constant. `pdfjs-dist` package remains installed but is no longer used by this page.
 - **Notes TTS — list support (April 2026):** Extended per-block TTS in the Notes feature to cover `<ul>` and `<ol>` elements in addition to paragraphs. `TTSList.tsx` contains a shared `TTSList` component parameterised by tag, exporting `TTSOl` and `TTSUl`. Both are passed via the `components` prop to `MdxContent` alongside `TTSParagraph`.

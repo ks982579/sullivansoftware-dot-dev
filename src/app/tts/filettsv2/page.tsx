@@ -69,8 +69,95 @@ function uint8ToBase64(data: Uint8Array): string {
 }
 
 // ---------------------------------------------------------------------------
-// PDF extraction via mupdf structured-text walker
+// JSON types for mupdf asJSON() output (with preserve-spans)
 // ---------------------------------------------------------------------------
+
+interface JsonFont {
+    name: string;
+    family: string;  // "serif" | "monospace" | ...
+    weight: string;  // "bold" | "normal"
+    style: string;   // "italic" | "normal"
+    size: number;
+}
+
+interface JsonLine {
+    text: string;
+    font: JsonFont;
+    bbox: { x: number; y: number; w: number; h: number };
+}
+
+interface JsonTextBlock {
+    type: 'text';
+    bbox: { x: number; y: number; w: number; h: number };
+    lines: JsonLine[];
+}
+
+interface JsonStructureBlock {
+    type: 'structure';
+    std: string;       // "H" = heading, "LI" = list item / figure label
+    contents: Array<JsonTextBlock | JsonStructureBlock>;
+}
+
+type JsonBlock = JsonTextBlock | JsonStructureBlock;
+
+interface JsonPage {
+    blocks: JsonBlock[];
+}
+
+// ---------------------------------------------------------------------------
+// PDF extraction via mupdf asJSON()
+// ---------------------------------------------------------------------------
+
+// Collect all JsonLine objects recursively from a block or its contents.
+function collectLines(block: JsonBlock): JsonLine[] {
+    if (block.type === 'text') return block.lines ?? [];
+    return (block.contents ?? []).flatMap(collectLines);
+}
+
+// Join span texts — they already carry their own spacing, so concatenate directly.
+function textFromLines(lines: JsonLine[]): string {
+    return lines.map(l => l.text).join('').trim();
+}
+
+function isMonoLines(lines: JsonLine[]): boolean {
+    if (lines.length === 0) return false;
+    const mono = lines.filter(l =>
+        l.font.family === 'monospace' ||
+        /mono|courier|typewriter|teletype/i.test(l.font.name)
+    ).length;
+    return mono / lines.length > 0.8;
+}
+
+function maxSize(lines: JsonLine[]): number {
+    return lines.reduce((m, l) => Math.max(m, l.font.size), 0);
+}
+
+// Classify and build a TextContentBlock from a set of lines; returns null if empty.
+function classifyTextBlock(
+    lines: JsonLine[],
+    forceHeading: boolean,
+    pageNum: number,
+    id: string
+): TextContentBlock | null {
+    const text = textFromLines(lines);
+    if (!text) return null;
+
+    const isCode = !forceHeading && isMonoLines(lines);
+    const size = maxSize(lines);
+    const boldCount = lines.filter(l => l.font.weight === 'bold').length;
+    const boldRatio = lines.length > 0 ? boldCount / lines.length : 0;
+
+    // Heading: forced by structure std="H", or font size above body threshold,
+    // or short block that is predominantly bold (same-size section headings).
+    const isHeading = forceHeading || (!isCode && (size >= 14 || (boldRatio > 0.8 && lines.length <= 3)));
+
+    const subtype: TextContentBlock['subtype'] = isCode ? 'code' : isHeading ? 'heading' : 'paragraph';
+    const headingLevel: TextContentBlock['headingLevel'] = isHeading
+        ? (size >= 24 ? 1 : size >= 14 ? 2 : 3)
+        : undefined;
+
+    return { type: 'text', subtype, text, headingLevel, pageNum, id };
+}
 
 async function extractFromPdf(
     buffer: ArrayBuffer
@@ -84,116 +171,66 @@ async function extractFromPdf(
     for (let p = 0; p < numPages; p++) {
         const pageNum = p + 1;
         const page = doc.loadPage(p);
-        // paragraph-break: MuPDF splits at paragraph boundaries, so each
-        // endTextBlock call represents exactly one logical paragraph.
-        // preserve-images: surface image blocks via onImageBlock.
-        const stext = page.toStructuredText('preserve-images,paragraph-break');
+        // preserve-spans: each font-run becomes a separate "line" in JSON with its own font metadata.
+        // paragraph-break: MuPDF splits at paragraph boundaries.
+        // preserve-images: exposes image blocks via the walker's onImageBlock callback.
+        const stext = page.toStructuredText('preserve-images,preserve-spans,paragraph-break');
 
-        // Per-block accumulated state — one entry per non-empty line
-        let lineTexts: string[] = [];
-        let lineMonos: number[] = [];  // mono char count per line
-        let lineBolds: number[] = [];  // bold char count per line
-        let lineTotals: number[] = []; // total char count per line
-        let lineMaxSizes: number[] = []; // max font size per line
-
-        // Per-line working state (reset in beginLine)
-        let curText = '';
-        let curMono = 0;
-        let curBold = 0;
-        let curTotal = 0;
-        let curMaxSize = 0;
-
+        // Collect images via walker — JSON output carries no pixel data.
+        // Track the bbox y-coordinate so we can interleave images with text in reading order.
+        const pageImages: Array<{ src: string; y: number; id: string }> = [];
         stext.walk({
-            onImageBlock(_bbox, _transform, image) {
+            onImageBlock(bbox, _transform, image) {
                 try {
                     const pixmap = image.toPixmap();
                     const pngData = pixmap.asPNG();
                     pixmap.destroy();
                     const src = `data:image/png;base64,${uint8ToBase64(pngData)}`;
-                    blocks.push({ type: 'image', src, pageNum, id: `b-${pageNum}-${blockIdx++}` });
+                    pageImages.push({ src, y: bbox[1], id: `b-${pageNum}-${blockIdx++}` });
                 } catch {
-                    // Skip images that fail to render (e.g. unsupported color spaces)
+                    // Skip images that fail to render (e.g. unsupported colour spaces)
                 }
-            },
-
-            beginTextBlock() {
-                lineTexts = [];
-                lineMonos = [];
-                lineBolds = [];
-                lineTotals = [];
-                lineMaxSizes = [];
-            },
-
-            beginLine(_bbox) {
-                curText = '';
-                curMono = 0;
-                curBold = 0;
-                curTotal = 0;
-                curMaxSize = 0;
-            },
-
-            onChar(c, _origin, font, size) {
-                curText += c;
-                curTotal++;
-                if (font.isMono()) curMono++;
-                if (font.isBold()) curBold++;
-                if (size > curMaxSize) curMaxSize = size;
-            },
-
-            endLine() {
-                const trimmed = curText.trim();
-                if (trimmed) {
-                    lineTexts.push(trimmed);
-                    lineMonos.push(curMono);
-                    lineBolds.push(curBold);
-                    lineTotals.push(curTotal);
-                    lineMaxSizes.push(curMaxSize);
-                }
-                curText = '';
-            },
-
-            endTextBlock() {
-                // With paragraph-break, this fires once per logical paragraph —
-                // no need to re-split by line spacing. Just classify and emit.
-                if (lineTexts.length === 0) return;
-
-                const monoSum = lineMonos.reduce((s, v) => s + v, 0);
-                const boldSum = lineBolds.reduce((s, v) => s + v, 0);
-                const totalSum = lineTotals.reduce((s, v) => s + v, 0);
-                const maxSize = lineMaxSizes.reduce((m, v) => Math.max(m, v), 0);
-
-                const monoRatio = totalSum > 0 ? monoSum / totalSum : 0;
-                const boldRatio = totalSum > 0 ? boldSum / totalSum : 0;
-
-                const isCode = monoRatio > 0.8;
-                // Heading if font size is noticeably larger than body text, OR if
-                // the block is short (≤3 lines) and predominantly bold — catches
-                // section headings that are the same size as body text but bolded.
-                const isHeading = !isCode && (maxSize >= 14 || (boldRatio > 0.8 && lineTexts.length <= 3));
-
-                let subtype: TextContentBlock['subtype'] = 'paragraph';
-                let headingLevel: TextContentBlock['headingLevel'];
-
-                if (isCode) {
-                    subtype = 'code';
-                } else if (isHeading) {
-                    subtype = 'heading';
-                    headingLevel = maxSize >= 24 ? 1 : maxSize >= 18 ? 2 : 3;
-                }
-
-                // Join lines: preserve newlines for code, join with space for prose
-                const text = lineTexts.join(isCode ? '\n' : ' ').trim();
-                if (!text) return;
-
-                blocks.push({ type: 'text', subtype, text, headingLevel, pageNum, id: `b-${pageNum}-${blockIdx++}` });
             },
         });
 
-        if (pageNum === 66) {
-            console.log(stext.asJSON());
+        // Parse JSON for all text and structure blocks.
+        const json: JsonPage = JSON.parse(stext.asJSON());
+        stext.destroy();
+
+        // Stage blocks with their top y-coordinate so we can sort into reading order.
+        const staged: Array<{ block: ContentBlock; y: number }> = [];
+
+        for (const imgEntry of pageImages) {
+            staged.push({
+                block: { type: 'image', src: imgEntry.src, pageNum, id: imgEntry.id },
+                y: imgEntry.y,
+            });
         }
 
-        stext.destroy();
+        for (const jsonBlock of json.blocks) {
+            if (jsonBlock.type === 'text') {
+                const cb = classifyTextBlock(jsonBlock.lines, false, pageNum, `b-${pageNum}-${blockIdx++}`);
+                if (cb) staged.push({ block: cb, y: jsonBlock.bbox.y });
+
+            } else if (jsonBlock.type === 'structure') {
+                // "LI" marks figure labels / image annotations — skip.
+                if (jsonBlock.std === 'LI') continue;
+
+                const lines = collectLines(jsonBlock);
+                const isHeading = jsonBlock.std === 'H';
+                const cb = classifyTextBlock(lines, isHeading, pageNum, `b-${pageNum}-${blockIdx++}`);
+                if (!cb) continue;
+
+                // Use the first content block's y-coordinate as position.
+                const firstContent = jsonBlock.contents.find((c): c is JsonTextBlock => c.type === 'text');
+                const y = firstContent?.bbox?.y ?? 0;
+                staged.push({ block: cb, y });
+            }
+        }
+
+        // Sort by y then emit — preserves document reading order across text and images.
+        staged.sort((a, b) => a.y - b.y);
+        for (const { block } of staged) blocks.push(block);
     }
 
     return { blocks, numPages };
