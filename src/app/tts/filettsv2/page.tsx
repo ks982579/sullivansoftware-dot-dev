@@ -114,9 +114,10 @@ function collectLines(block: JsonBlock): JsonLine[] {
     return (block.contents ?? []).flatMap(collectLines);
 }
 
-// Join span texts — they already carry their own spacing, so concatenate directly.
+// Join span texts. Some spans carry their own leading/trailing spaces; others don't.
+// Join with a space as fallback and collapse any resulting runs of whitespace.
 function textFromLines(lines: JsonLine[]): string {
-    return lines.map(l => l.text).join('').trim();
+    return lines.map(l => l.text).join(' ').replace(/\s+/g, ' ').trim();
 }
 
 function isMonoLines(lines: JsonLine[]): boolean {
