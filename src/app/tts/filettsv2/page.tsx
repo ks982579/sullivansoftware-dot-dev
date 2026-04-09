@@ -175,7 +175,8 @@ async function extractFromPdf(
         // preserve-spans: each font-run becomes a separate "line" in JSON with its own font metadata.
         // paragraph-break: MuPDF splits at paragraph boundaries.
         // preserve-images: exposes image blocks via the walker's onImageBlock callback.
-        const stext = page.toStructuredText('preserve-images,preserve-spans,paragraph-break');
+        // const stext = page.toStructuredText('preserve-images,preserve-spans,paragraph-break');
+        const stext = page.toStructuredText('preserve-images,preserve-spans,dehyphenate,use-cid-for-unknown-unicode,collect-styles');
 
         // Collect images via walker — JSON output carries no pixel data.
         // Track the bbox y-coordinate so we can interleave images with text in reading order.
@@ -196,7 +197,14 @@ async function extractFromPdf(
 
         // Parse JSON for all text and structure blocks.
         const json: JsonPage = JSON.parse(stext.asJSON());
+        if (pageNum === 42) {
+            console.log(stext);
+        }
         stext.destroy();
+
+        if (pageNum === 42) {
+            console.log(json);
+        }
 
         // Stage blocks with their top y-coordinate so we can sort into reading order.
         const staged: Array<{ block: ContentBlock; y: number }> = [];
