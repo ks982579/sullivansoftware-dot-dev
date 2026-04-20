@@ -42,13 +42,17 @@ const KOKORO_VOICES: ITTSVoice[] = [
 export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
     private _tts: KokoroTTS | null = null;
     private _currentAudio: HTMLAudioElement | null = null;
+    private _currentResolve: (() => void) | null = null; // lets stop() unblock consume's awaited promise
     private _stopped: boolean = false;
+    private _generation: number = 0; // incremented per speak() call; old produce loops self-terminate
     private _currentOptions: TTSSpeakOptions | null = null;
     private _device: 'webgpu' | 'wasm' | 'cpu' | null = null;
     private _dtype?: 'fp32' | 'fp16' | 'q8' | 'q4f16' | 'q4' = 'q8';
 
     async speak(text: string, options: TTSSpeakOptions): Promise<void> {
-        // Reset stop flag so this call runs fully even if stop() was called before
+        // Each speak() gets its own generation ID. Old produce loops check this to self-terminate
+        // instead of competing with the new call on the shared WASM/WebGPU runtime.
+        const gen = ++this._generation;
         this._stopped = false;
         this._currentOptions = options;
 
@@ -65,7 +69,7 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
             }
         }
 
-        // Initiate TTS if not instantiated. 
+        // Initiate TTS if not instantiated.
         if (!this._tts) {
             this._tts = await KokoroTTS.from_pretrained(
                 "onnx-community/Kokoro-82M-v1.0-ONNX",
@@ -88,61 +92,60 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
         splitter.push(text); // can push more than once (like for LLM)
         splitter.close(); // can keep open with 'flush'
 
-        /*
-        const audio = await this._tts.generate(text, {
-        });
-
-        const blob = audio.toBlob();
-        const url = URL.createObjectURL(blob);
-        const audioEl = new Audio(url);
-        this._currentAudio = audioEl;
-        */
-
         options.onStart?.();
 
         const audioQueue: Array<() => Promise<void>> = [];
         let playbackDone = false;
 
         const produce = async () => {
-            for await (const { audio } of stream) {
-                if (this._stopped) break;
-                const blob = audio.toBlob();
-                const url = URL.createObjectURL(blob);
+            try {
+                for await (const { audio } of stream) {
+                    // Stop if stop() was called or a newer speak() has started
+                    if (this._stopped || this._generation !== gen) break;
+                    const blob = audio.toBlob();
+                    const url = URL.createObjectURL(blob);
 
-                audioQueue.push(() => new Promise<void>((resolve) => {
-                    const audioEl = new Audio(url);
-                    this._currentAudio = audioEl;
-                    audioEl.onended = () => {
-                        URL.revokeObjectURL(url);
-                        // this._currentAudio = null;
-                        // this._stopResolve = null;
-                        // options.onEnd?.();
-                        resolve();
-                    };
+                    audioQueue.push(() => new Promise<void>((resolve) => {
+                        const audioEl = new Audio(url);
+                        this._currentAudio = audioEl;
+                        // Expose resolve so stop() can unblock consume without nulling DOM handlers
+                        this._currentResolve = resolve;
 
-                    audioEl.onerror = (e) => {
-                        URL.revokeObjectURL(url);
-                        // this._currentAudio = null;
-                        // this._stopResolve = null;
-                        options.onError?.(e instanceof Event ? e : new Error(String(e)));
-                        resolve();
-                    };
+                        audioEl.onended = () => {
+                            this._currentResolve = null;
+                            URL.revokeObjectURL(url);
+                            resolve();
+                        };
 
-                    audioEl.play().catch((e: Error) => {
-                        URL.revokeObjectURL(url);
-                        // this._currentAudio = null;
-                        // this._stopResolve = null;
-                        options.onError?.(e);
-                        resolve();
-                    });
-                }));
+                        audioEl.onerror = (e) => {
+                            this._currentResolve = null;
+                            URL.revokeObjectURL(url);
+                            options.onError?.(e instanceof Event ? e : new Error(String(e)));
+                            resolve();
+                        };
+
+                        audioEl.play().catch((e: Error) => {
+                            this._currentResolve = null;
+                            URL.revokeObjectURL(url);
+                            options.onError?.(e);
+                            resolve();
+                        });
+                    }));
+                }
+            } catch (e) {
+                // Kokoro inference error (e.g. OOM, context limit). Report it so the UI resets.
+                if (!this._stopped && this._generation === gen) {
+                    options.onError?.(e instanceof Error ? e : new Error(String(e)));
+                }
+            } finally {
+                // Always mark done so consume can exit — even if produce threw mid-stream.
+                playbackDone = true;
             }
-            playbackDone = true;
-        }
+        };
 
         const consume = async () => {
-            // PlaybackDone keeps channel open in case audioQueue is empty
             while (!playbackDone || audioQueue.length > 0) {
+                if (this._stopped || this._generation !== gen) break;
                 if (audioQueue.length === 0) {
                     await new Promise(r => setTimeout(r, 50)); // wait for next chunk
                     continue;
@@ -153,47 +156,10 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
 
         await Promise.all([produce(), consume()]);
 
-        /*
-        for await (const { audio } of stream) {
-            if (this._stopped) break;
-
-            const blob = audio.toBlob();
-            const url = URL.createObjectURL(blob);
-            const audioEl = new Audio(url);
-            this._currentAudio = audioEl;
-
-            await new Promise<void>((resolve) => {
-
-                audioEl.onended = () => {
-                    URL.revokeObjectURL(url);
-                    // this._currentAudio = null;
-                    // this._stopResolve = null;
-                    // options.onEnd?.();
-                    resolve();
-                };
-
-                audioEl.onerror = (e) => {
-                    URL.revokeObjectURL(url);
-                    // this._currentAudio = null;
-                    // this._stopResolve = null;
-                    options.onError?.(e instanceof Event ? e : new Error(String(e)));
-                    resolve();
-                };
-
-                audioEl.play().catch((e: Error) => {
-                    URL.revokeObjectURL(url);
-                    // this._currentAudio = null;
-                    // this._stopResolve = null;
-                    options.onError?.(e);
-                    resolve();
-                });
-            });
-        }
-        */
-
         this._currentAudio = null;
+        this._currentResolve = null;
         this._currentOptions = null;
-        if (!this._stopped) options.onEnd?.();
+        if (!this._stopped && this._generation === gen) options.onEnd?.();
     }
 
     stop(): void {
@@ -201,12 +167,16 @@ export class KokoroAdapter implements ITTSAdapter, IVoiceProvider {
         const opts = this._currentOptions;
         this._currentOptions = null;
         if (this._currentAudio) {
-            this._currentAudio.onended = null;
-            this._currentAudio.onerror = null;
             this._currentAudio.pause();
             URL.revokeObjectURL(this._currentAudio.src);
             this._currentAudio = null;
         }
+        // Resolve consume's awaited promise so its loop can observe _stopped and exit cleanly.
+        // Previously stop() would null onended/onerror on the live DOM element, which left
+        // consume permanently hung on a Promise that could never resolve.
+        const resolve = this._currentResolve;
+        this._currentResolve = null;
+        resolve?.();
         // Notify the interrupted caller so its UI (e.g. "speaking…" badge) resets
         opts?.onError?.(new Error('stopped'));
     }
