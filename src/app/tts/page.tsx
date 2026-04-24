@@ -324,14 +324,42 @@ export default Tts;
 
 /**
  * Format text for speech synthesis
- * - Handles "__" as "underscore" for reading
+ * - Strips markdown formatting characters (headings, bold, italic, code, lists, links, tables)
  * - Removes PDF hyphenated line breaks
  * - Normalizes whitespace and newlines
  * - Removes square bracket references [1], [2], etc.
  */
 const _fmtTextForSpeech = (text: string): string => {
-    const tmp = text.split("__");
-    text = tmp.join("\ndunder-score\n");
+    // Images: keep alt text, discard URL
+    text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
+    // Links: keep link text, discard URL
+    text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    // Fenced code blocks: keep content
+    text = text.replace(/```[^\n]*\n([\s\S]*?)```/g, '$1');
+    // Inline code: keep content
+    text = text.replace(/`([^`]*)`/g, '$1');
+    // Headings: remove leading # symbols
+    text = text.replace(/^#{1,6}\s+/gm, '');
+    // Bold (** or __): keep inner text
+    text = text.replace(/\*\*([\s\S]*?)\*\*/g, '$1');
+    text = text.replace(/__([\s\S]*?)__/g, '$1');
+    // Italic (* or _): keep inner text
+    text = text.replace(/\*([\s\S]*?)\*/g, '$1');
+    text = text.replace(/_([\s\S]*?)_/g, '$1');
+    // Strikethrough
+    text = text.replace(/~~([\s\S]*?)~~/g, '$1');
+    // Blockquotes: remove leading >
+    text = text.replace(/^>\s*/gm, '');
+    // Horizontal rules
+    text = text.replace(/^[-*_]{3,}\s*$/gm, '');
+    // Table separator rows (e.g. |---|---|)
+    text = text.replace(/^\|?[\s\-:|]+\|[\s\-:|]*\|?\s*$/gm, '');
+    // Table pipes: replace with space
+    text = text.replace(/\|/g, ' ');
+    // Unordered list markers (-, *, +)
+    text = text.replace(/^\s*[-*+]\s+/gm, '');
+    // Ordered list markers (1. 2. etc.)
+    text = text.replace(/^\s*\d+\.\s+/gm, '');
 
     // PDFs have this word-connect over new line
     text = text.replaceAll("-\n", "");
@@ -340,7 +368,7 @@ const _fmtTextForSpeech = (text: string): string => {
     const lectureList = text.split('\n');
     text = lectureList.map(x => x.trim()).join(' ');
 
-    // Remove square brackets and what is inside (usually references)
+    // Remove any remaining square bracket content (e.g. reference numbers)
     text = text.replace(/\[[^\]]*\]/g, '');
 
     return text;
