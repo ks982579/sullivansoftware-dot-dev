@@ -97,6 +97,48 @@ export const educationData: Education[] = [
                     "Coming soon...",
                 specialization: "Networks and Distributed Systems",
             },
+            {
+                id: "machine-learning-1",
+                name: "Machine Learning",
+                description:
+                    "In progress...",
+                specialization: "Machine Learning",
+            },
+            {
+                id: "deep-learning-1",
+                name: "Deep Learning",
+                description:
+                    "In progress...",
+                specialization: "Deep Learning",
+            },
+            {
+                id: "blockchain-1",
+                name: "Blockchain",
+                description:
+                    "In progress...",
+                specialization: "Blockchain",
+            },
+            {
+                id: "computer-science-2",
+                name: "Seminar: Current Topics in Computer Science",
+                description:
+                    "In progress...",
+                specialization: "Artificial Intelligence and Blockchain",
+            },
+            {
+                id: "quantum-computing-1",
+                name: "Quantum Computing",
+                description:
+                    "To do...",
+                specialization: "Quantum Computing",
+            },
+            {
+                id: "master-thesis-1",
+                name: "Master Thesis",
+                description:
+                    "To do...",
+                specialization: "Unsure",
+            },
         ],
     },
     {
