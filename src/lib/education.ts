@@ -28,46 +28,74 @@ export const educationData: Education[] = [
             "Advanced studies in Computer Science with focus on emerging technologies and specialized domains. This program allows for deep exploration into areas of personal interest while building a strong foundation in theoretical and practical computer science.",
         courses: [
             {
-                id: "blockchain-1",
-                name: "Blockchain Technology",
+                id: "python-1",
+                name: "Programming with Python",
                 description:
-                    "In-depth study of blockchain architectures, smart contracts, consensus mechanisms, and cryptographic foundations.",
-                specialization: "Blockchain",
+                    "Coming soon...",
+                specialization: "Python",
             },
             {
-                id: "distributed-sys",
-                name: "Distributed Systems",
+                id: "software-engineering-1",
+                name: "Software Engineering: Software Processes",
                 description:
-                    "Design and implementation of distributed systems, covering scalability, fault tolerance, and consistency models.",
-                specialization: "Systems",
+                    "Coming soon...",
+                specialization: "Software Engineering",
             },
             {
-                id: "ml-1",
-                name: "Machine Learning",
+                id: "algorithmics-1",
+                name: "Algorithmics",
                 description:
-                    "Fundamentals of machine learning algorithms, model training, evaluation, and real-world applications.",
-                specialization: "AI",
+                    "Coming soon...",
+                specialization: "Algorithms and Data Structures",
             },
             {
-                id: "crypto-1",
-                name: "Cryptography",
+                id: "statistics-1",
+                name: "Advances Statistics",
                 description:
-                    "Cryptographic algorithms, protocols, and their applications in modern security systems.",
-                specialization: "Security",
+                    "Coming soon...",
+                specialization: "Statistics",
             },
             {
-                id: "cloud-arch",
-                name: "Cloud Architecture",
+                id: "big-data-1",
+                name: "Big Data Technology",
                 description:
-                    "Design patterns and best practices for building scalable applications on cloud platforms.",
-                specialization: "Systems",
+                    "Coming soon...",
+                specialization: "Big Data",
             },
             {
-                id: "data-structures",
-                name: "Advanced Data Structures",
+                id: "artificial-intelligence-1",
+                name: "Artificial Intelligence",
                 description:
-                    "Deep dive into complex data structures and their algorithmic applications for performance optimization.",
-                specialization: "Algorithms",
+                    "Coming soon...",
+                specialization: "Artificial Intelligence",
+            },
+            {
+                id: "cyber-security-1",
+                name: "Cyber Security and Data Protection",
+                description:
+                    "Coming soon...",
+                specialization: "Cyber Security",
+            },
+            {
+                id: "software-engineering-2",
+                name: "Project: Software Engineering",
+                description:
+                    "Coming soon...",
+                specialization: "Software Engineering Practices, Web Development, and Rust",
+            },
+            {
+                id: "computer-science-1",
+                name: "Project: Computer Science",
+                description:
+                    "Coming soon...",
+                specialization: "Artificial Intelligence, Machine Learning, Python",
+            },
+            {
+                id: "distributed-systems-1",
+                name: "Networks and Distributed Systems",
+                description:
+                    "Coming soon...",
+                specialization: "Networks and Distributed Systems",
             },
         ],
     },
