@@ -69,7 +69,138 @@ function uint8ToBase64(data: Uint8Array): string {
 }
 
 // ---------------------------------------------------------------------------
-// PDF extraction via mupdf structured-text walker
+// JSON types for mupdf structured-text output
+// ---------------------------------------------------------------------------
+
+interface MupdfLine {
+    text: string;
+    font?: { family?: string; weight?: string; size?: number };
+}
+
+interface MupdfTextNodeJson {
+    type: 'text';
+    lines: MupdfLine[];
+}
+
+interface MupdfStructureNodeJson {
+    type: 'structure';
+    std: string;
+    contents: MupdfNodeJson[];
+}
+
+type MupdfNodeJson = MupdfTextNodeJson | MupdfStructureNodeJson | { type: string };
+
+// ---------------------------------------------------------------------------
+// Helpers for JSON-based text extraction
+// ---------------------------------------------------------------------------
+
+// Recursively collect all line texts and font data from a node's entire subtree.
+function gatherLines(node: MupdfNodeJson): { texts: string[]; lines: MupdfLine[] } {
+    const texts: string[] = [];
+    const lines: MupdfLine[] = [];
+
+    function walk(n: MupdfNodeJson) {
+        if (n.type === 'text') {
+            for (const line of (n as MupdfTextNodeJson).lines ?? []) {
+                const t = (line.text ?? '').trim();
+                if (t) { texts.push(t); lines.push(line); }
+            }
+        } else if (n.type === 'structure') {
+            for (const child of (n as MupdfStructureNodeJson).contents ?? []) walk(child);
+        }
+    }
+
+    walk(node);
+    return { texts, lines };
+}
+
+function emitBlock(
+    texts: string[],
+    lines: MupdfLine[],
+    isStructureHeading: boolean,
+    stdTag: string | undefined,
+    pageNum: number,
+    out: ContentBlock[],
+    counter: { n: number },
+) {
+    if (texts.length === 0) return;
+
+    const count = lines.length || 1;
+    const families = lines.map((l) => (l.font?.family ?? '').toLowerCase());
+    const weights = lines.map((l) => (l.font?.weight ?? '').toLowerCase());
+    const sizes = lines.map((l) => l.font?.size ?? 0);
+
+    const maxSize = sizes.reduce((m, s) => Math.max(m, s), 0);
+    const monoCount = families.filter((f) => f === 'monospace' || f.includes('mono')).length;
+    const boldCount = weights.filter((w) => w === 'bold').length;
+    const monoRatio = monoCount / count;
+    const boldRatio = boldCount / count;
+
+    const isCode = monoRatio > 0.8;
+    const isHeading = !isCode && (
+        isStructureHeading ||
+        maxSize >= 14 ||
+        (boldRatio > 0.8 && texts.length <= 3)
+    );
+
+    let subtype: TextContentBlock['subtype'] = 'paragraph';
+    let headingLevel: TextContentBlock['headingLevel'];
+
+    if (isCode) {
+        subtype = 'code';
+    } else if (isHeading) {
+        subtype = 'heading';
+        const lvl = stdTag ? parseInt(stdTag.slice(1), 10) : NaN;
+        headingLevel = (Number.isFinite(lvl) && lvl >= 1 && lvl <= 3
+            ? lvl
+            : maxSize >= 24 ? 1 : maxSize >= 18 ? 2 : 3) as 1 | 2 | 3;
+    }
+
+    const text = texts.join(isCode ? '\n' : ' ').trim();
+    if (!text) return;
+
+    out.push({ type: 'text', subtype, text, headingLevel, pageNum, id: `b-${pageNum}-${counter.n++}` });
+}
+
+// Process one node from a page's block list.
+// Known leaf tags (headings, list items, paragraphs) → gather all descendant
+// text into one block so a heading or bullet reads as a single TTS unit.
+// Container tags and unknowns → recurse so nothing is silently dropped.
+function processJsonBlock(
+    node: MupdfNodeJson,
+    pageNum: number,
+    out: ContentBlock[],
+    counter: { n: number },
+) {
+    if (node.type === 'image') return; // pixel data not in JSON; handled by walker
+
+    if (node.type === 'text') {
+        const { texts, lines } = gatherLines(node);
+        emitBlock(texts, lines, false, undefined, pageNum, out, counter);
+        return;
+    }
+
+    if (node.type === 'structure') {
+        const sb = node as MupdfStructureNodeJson;
+        const std = sb.std ?? '';
+        const isHeadingTag = std !== '' && /^H\d*$/.test(std);
+
+        if (isHeadingTag || std === 'P' || std === 'LI') {
+            // Single semantic unit — collect all descendant text as one block.
+            const { texts, lines } = gatherLines(node);
+            emitBlock(texts, lines, isHeadingTag, isHeadingTag ? std : undefined, pageNum, out, counter);
+        } else {
+            // Container (L, Sect, Div, Table, …) or unknown — recurse so
+            // every descendant text node gets its own block and nothing is lost.
+            for (const child of sb.contents ?? []) {
+                processJsonBlock(child, pageNum, out, counter);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PDF extraction — walker for images, JSON for text
 // ---------------------------------------------------------------------------
 
 async function extractFromPdf(
@@ -79,30 +210,14 @@ async function extractFromPdf(
     const doc = mupdf.Document.openDocument(buffer, 'application/pdf');
     const numPages = doc.countPages();
     const blocks: ContentBlock[] = [];
-    let blockIdx = 0;
+    const counter = { n: 0 };
 
     for (let p = 0; p < numPages; p++) {
         const pageNum = p + 1;
         const page = doc.loadPage(p);
-        // paragraph-break: MuPDF splits at paragraph boundaries, so each
-        // endTextBlock call represents exactly one logical paragraph.
-        // preserve-images: surface image blocks via onImageBlock.
         const stext = page.toStructuredText('preserve-images,paragraph-break');
 
-        // Per-block accumulated state — one entry per non-empty line
-        let lineTexts: string[] = [];
-        let lineMonos: number[] = [];  // mono char count per line
-        let lineBolds: number[] = [];  // bold char count per line
-        let lineTotals: number[] = []; // total char count per line
-        let lineMaxSizes: number[] = []; // max font size per line
-
-        // Per-line working state (reset in beginLine)
-        let curText = '';
-        let curMono = 0;
-        let curBold = 0;
-        let curTotal = 0;
-        let curMaxSize = 0;
-
+        // Images: pixel data is only available via the walker (not in JSON).
         stext.walk({
             onImageBlock(_bbox, _transform, image) {
                 try {
@@ -110,87 +225,23 @@ async function extractFromPdf(
                     const pngData = pixmap.asPNG();
                     pixmap.destroy();
                     const src = `data:image/png;base64,${uint8ToBase64(pngData)}`;
-                    blocks.push({ type: 'image', src, pageNum, id: `b-${pageNum}-${blockIdx++}` });
+                    blocks.push({ type: 'image', src, pageNum, id: `b-${pageNum}-${counter.n++}` });
                 } catch {
-                    // Skip images that fail to render (e.g. unsupported color spaces)
+                    // Skip images that fail to render (e.g. unsupported colour spaces)
                 }
-            },
-
-            beginTextBlock() {
-                lineTexts = [];
-                lineMonos = [];
-                lineBolds = [];
-                lineTotals = [];
-                lineMaxSizes = [];
-            },
-
-            beginLine(_bbox) {
-                curText = '';
-                curMono = 0;
-                curBold = 0;
-                curTotal = 0;
-                curMaxSize = 0;
-            },
-
-            onChar(c, _origin, font, size) {
-                curText += c;
-                curTotal++;
-                if (font.isMono()) curMono++;
-                if (font.isBold()) curBold++;
-                if (size > curMaxSize) curMaxSize = size;
-            },
-
-            endLine() {
-                const trimmed = curText.trim();
-                if (trimmed) {
-                    lineTexts.push(trimmed);
-                    lineMonos.push(curMono);
-                    lineBolds.push(curBold);
-                    lineTotals.push(curTotal);
-                    lineMaxSizes.push(curMaxSize);
-                }
-                curText = '';
-            },
-
-            endTextBlock() {
-                // With paragraph-break, this fires once per logical paragraph —
-                // no need to re-split by line spacing. Just classify and emit.
-                if (lineTexts.length === 0) return;
-
-                const monoSum = lineMonos.reduce((s, v) => s + v, 0);
-                const boldSum = lineBolds.reduce((s, v) => s + v, 0);
-                const totalSum = lineTotals.reduce((s, v) => s + v, 0);
-                const maxSize = lineMaxSizes.reduce((m, v) => Math.max(m, v), 0);
-
-                const monoRatio = totalSum > 0 ? monoSum / totalSum : 0;
-                const boldRatio = totalSum > 0 ? boldSum / totalSum : 0;
-
-                const isCode = monoRatio > 0.8;
-                // Heading if font size is noticeably larger than body text, OR if
-                // the block is short (≤3 lines) and predominantly bold — catches
-                // section headings that are the same size as body text but bolded.
-                const isHeading = !isCode && (maxSize >= 14 || (boldRatio > 0.8 && lineTexts.length <= 3));
-
-                let subtype: TextContentBlock['subtype'] = 'paragraph';
-                let headingLevel: TextContentBlock['headingLevel'];
-
-                if (isCode) {
-                    subtype = 'code';
-                } else if (isHeading) {
-                    subtype = 'heading';
-                    headingLevel = maxSize >= 24 ? 1 : maxSize >= 18 ? 2 : 3;
-                }
-
-                // Join lines: preserve newlines for code, join with space for prose
-                const text = lineTexts.join(isCode ? '\n' : ' ').trim();
-                if (!text) return;
-
-                blocks.push({ type: 'text', subtype, text, headingLevel, pageNum, id: `b-${pageNum}-${blockIdx++}` });
             },
         });
 
-        if (pageNum === 66) {
-            console.log(stext.asJSON());
+        // Text: parse the JSON representation so structure-tagged nodes
+        // (headings, list items, paragraphs, etc.) are all captured.
+        const pageJson = JSON.parse(stext.asJSON()) as { blocks: MupdfNodeJson[] };
+
+        // if (pageNum === 21) {
+        //     console.log(pageJson);
+        // }
+
+        for (const block of pageJson.blocks ?? []) {
+            processJsonBlock(block, pageNum, blocks, counter);
         }
 
         stext.destroy();
