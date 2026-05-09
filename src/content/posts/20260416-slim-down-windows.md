@@ -103,7 +103,7 @@ These commands are all read-only and completely safe. Run them to build a pictur
 ```cmd
 powercfg /sleepstudy /output %USERPROFILE%\Desktop\sleepstudy.html /duration 7
 ```
-This generates an HTML report covering the last 7 days of standby sessions. Each session is color-coded: **green** means DRIPS ≥94% and drain <0.33%/hour, **yellow** is moderate activity, and **red** means the system never reached deep idle. The "Top Offenders" table in each red session identifies the specific driver or process responsible. Focus on long overnight/weekend sessions with sustained high drain.
+This generates an HTML report covering the last 7 days of standby sessions. Each session is color-coded: **green** means DRIPS ≥94% and drain &lt;0.33%/hour, **yellow** is moderate activity, and **red** means the system never reached deep idle. The "Top Offenders" table in each red session identifies the specific driver or process responsible. Focus on long overnight/weekend sessions with sustained high drain.
 
 **Energy efficiency report** — captures real-time power problems:
 ```cmd
