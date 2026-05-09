@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
+// import Image from "next/image";
+// import Link from "next/link";
 import { useEffect, useState } from "react";
-import { educationData } from "@/lib/education";
+// import { educationData } from "@/lib/education";
 
 const CoolSites = (): React.JSX.Element => {
     const [isVisible, setIsVisible] = useState(false);
