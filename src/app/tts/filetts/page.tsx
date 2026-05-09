@@ -94,6 +94,29 @@ type MupdfNodeJson = MupdfTextNodeJson | MupdfStructureNodeJson | { type: string
 // Helpers for JSON-based text extraction
 // ---------------------------------------------------------------------------
 
+// Join lines, detecting hyphenated word-breaks: if a line ends with "-" and
+// the character before the hyphen is a letter, and the next line starts with a
+// letter, strip the hyphen and join directly so TTS reads the word whole.
+function joinLines(texts: string[], isCode: boolean): string {
+    if (isCode) return texts.join('\n');
+    let out = texts[0] ?? '';
+    for (let i = 1; i < texts.length; i++) {
+        const next = texts[i];
+        if (
+            out.length >= 2 &&
+            out[out.length - 1] === '-' &&
+            /[a-zA-Z]/.test(out[out.length - 2]) &&
+            next.length > 0 &&
+            /[a-zA-Z]/.test(next[0])
+        ) {
+            out = out.slice(0, -1) + next; // drop hyphen, join directly
+        } else {
+            out += ' ' + next;
+        }
+    }
+    return out;
+}
+
 // Recursively collect all line texts and font data from a node's entire subtree.
 function gatherLines(node: MupdfNodeJson): { texts: string[]; lines: MupdfLine[] } {
     const texts: string[] = [];
@@ -156,7 +179,7 @@ function emitBlock(
             : maxSize >= 24 ? 1 : maxSize >= 18 ? 2 : 3) as 1 | 2 | 3;
     }
 
-    const text = texts.join(isCode ? '\n' : ' ').trim();
+    const text = joinLines(texts, isCode).trim();
     if (!text) return;
 
     out.push({ type: 'text', subtype, text, headingLevel, pageNum, id: `b-${pageNum}-${counter.n++}` });
@@ -270,10 +293,29 @@ function extractFromText(raw: string): { blocks: ContentBlock[]; numPages: numbe
 }
 
 // ---------------------------------------------------------------------------
+// Bold Focus Reading — bold the first fraction of each word to guide the eye
+// ---------------------------------------------------------------------------
+
+// For each word: always bold the first letter, then bold Math.floor(len/3) more.
+// Non-alphabetic tokens (spaces, numbers, punctuation) pass through unchanged.
+function applyBoldFocus(text: string): React.ReactNode {
+    return text.split(/([a-zA-Z]+)/).map((token, i) => {
+        if (!/^[a-zA-Z]+$/.test(token)) return token;
+        const boldLen = 1 + Math.floor(token.length / 3);
+        return (
+            <span key={i}>
+                <strong className="font-bold">{token.slice(0, boldLen)}</strong>
+                {token.slice(boldLen)}
+            </span>
+        );
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Hoverable TTS wrapper (paragraphs, headings, code)
 // ---------------------------------------------------------------------------
 
-function TtsTextBlock({ block }: { block: TextContentBlock }) {
+function TtsTextBlock({ block, boldFocus }: { block: TextContentBlock; boldFocus: boolean }) {
     const [hovered, setHovered] = useState(false);
     const [speaking, setSpeaking] = useState(false);
     const ref = useRef<HTMLElement>(null);
@@ -330,7 +372,7 @@ function TtsTextBlock({ block }: { block: TextContentBlock }) {
                     className={`${sizeClass} ${activeClass}`}
                     style={borderStyle}
                 >
-                    {block.text}
+                    {boldFocus ? applyBoldFocus(block.text) : block.text}
                 </p>
             );
         }
@@ -341,7 +383,7 @@ function TtsTextBlock({ block }: { block: TextContentBlock }) {
                 className={`text-sm leading-relaxed text-text-primary ${activeClass}`}
                 style={borderStyle}
             >
-                {block.text}
+                {boldFocus ? applyBoldFocus(block.text) : block.text}
             </p>
         );
     }
@@ -407,6 +449,8 @@ export default function PdfTtsPage() {
     const [error, setError] = useState('');
     // 'pdf' shows per-page cards; 'text' shows a single card with no page header
     const [sourceType, setSourceType] = useState<'pdf' | 'text' | null>(null);
+
+    const [boldFocus, setBoldFocus] = useState(false);
 
     // Paste panel state
     const [pasteOpen, setPasteOpen] = useState(false);
@@ -490,6 +534,19 @@ export default function PdfTtsPage() {
                 </div>
 
                 <TTSSettingsPanel />
+
+                {/* Bold Focus Reading toggle */}
+                <div className="mb-4 flex items-center gap-3 px-1">
+                    <button
+                        role="switch"
+                        aria-checked={boldFocus}
+                        onClick={() => setBoldFocus((v) => !v)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none ${boldFocus ? 'bg-primary' : 'bg-primary/20'}`}
+                    >
+                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${boldFocus ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                    <span className="text-sm text-text-secondary">Bold Focus Reading</span>
+                </div>
 
                 {/* Drop zone */}
                 <div
@@ -593,7 +650,7 @@ export default function PdfTtsPage() {
                                                     />
                                                 );
                                             }
-                                            return <TtsTextBlock key={block.id} block={block} />;
+                                            return <TtsTextBlock key={block.id} block={block} boldFocus={boldFocus} />;
                                         })}
                                     </div>
                                 )}
