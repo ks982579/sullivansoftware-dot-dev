@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getTTSSettings } from '@/lib/ttsStore';
 import { getShell } from '@/lib/ttsShell';
 import TTSSettingsPanel from '@/components/TTSSettingsPanel';
@@ -424,6 +424,84 @@ function TtsTextBlock({ block, boldFocus }: { block: TextContentBlock; boldFocus
 
 
 // ---------------------------------------------------------------------------
+// Page card — gates bold-focus spans to pages near the viewport so the DOM
+// stays lean for textbooks with 100+ pages.
+//
+// FUTURE: second-pass optimisation — when boldFocus is off, pages still all
+// render their full block list. For very large documents a further improvement
+// would be to render a placeholder <div> at the page's measured height until
+// the card enters the observer buffer, then swap in the real content. This
+// keeps the scrollbar accurate while dropping ~97% of DOM nodes for off-screen
+// pages. Deferred until needed.
+// ---------------------------------------------------------------------------
+
+function PageCard({
+    pageNum,
+    pageBlocks,
+    sourceType,
+    boldFocus,
+}: {
+    pageNum: number;
+    pageBlocks: ContentBlock[];
+    sourceType: 'pdf' | 'text' | null;
+    boldFocus: boolean;
+}) {
+    const cardRef = useRef<HTMLDivElement>(null);
+    const [nearViewport, setNearViewport] = useState(false);
+
+    useEffect(() => {
+        const el = cardRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => setNearViewport(entry.isIntersecting),
+            { rootMargin: '600px' },
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    // Only generate bold-focus spans for pages that are in or near the viewport.
+    // Off-screen pages render plain text: same layout, a fraction of the nodes.
+    const effectiveBoldFocus = boldFocus && nearViewport;
+
+    return (
+        <div ref={cardRef} className="bg-paper rounded-lg border-2 border-primary/20 p-6 shadow-sm">
+            {sourceType === 'pdf' && (
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-primary/10">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-text-secondary">
+                        Page {pageNum}
+                    </span>
+                    <span className="text-xs text-text-secondary/60">
+                        {pageBlocks.length} block{pageBlocks.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+            )}
+
+            {pageBlocks.length === 0 ? (
+                <p className="text-xs text-text-secondary italic">No extractable content on this page.</p>
+            ) : (
+                <div className="space-y-1">
+                    {pageBlocks.map((block) => {
+                        if (block.type === 'image') {
+                            return (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    key={block.id}
+                                    src={(block as ImageContentBlock).src}
+                                    alt="PDF image"
+                                    className="max-w-full rounded border border-primary/10 my-2"
+                                />
+                            );
+                        }
+                        return <TtsTextBlock key={block.id} block={block as TextContentBlock} boldFocus={effectiveBoldFocus} />;
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
 
@@ -621,40 +699,13 @@ export default function PdfTtsPage() {
                 {!loading && pages.length > 0 && (
                     <div className="space-y-6">
                         {pages.map(({ pageNum, blocks: pageBlocks }) => (
-                            <div key={pageNum} className="bg-paper rounded-lg border-2 border-primary/20 p-6 shadow-sm">
-                                {/* Only show page header for PDFs — text/paste has no meaningful page concept */}
-                                {sourceType === 'pdf' && (
-                                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-primary/10">
-                                        <span className="text-xs font-semibold uppercase tracking-widest text-text-secondary">
-                                            Page {pageNum}
-                                        </span>
-                                        <span className="text-xs text-text-secondary/60">
-                                            {pageBlocks.length} block{pageBlocks.length !== 1 ? 's' : ''}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {pageBlocks.length === 0 ? (
-                                    <p className="text-xs text-text-secondary italic">No extractable content on this page.</p>
-                                ) : (
-                                    <div className="space-y-1">
-                                        {pageBlocks.map((block) => {
-                                            if (block.type === 'image') {
-                                                return (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img
-                                                        key={block.id}
-                                                        src={block.src}
-                                                        alt="PDF image"
-                                                        className="max-w-full rounded border border-primary/10 my-2"
-                                                    />
-                                                );
-                                            }
-                                            return <TtsTextBlock key={block.id} block={block} boldFocus={boldFocus} />;
-                                        })}
-                                    </div>
-                                )}
-                            </div>
+                            <PageCard
+                                key={pageNum}
+                                pageNum={pageNum}
+                                pageBlocks={pageBlocks}
+                                sourceType={sourceType}
+                                boldFocus={boldFocus}
+                            />
                         ))}
                     </div>
                 )}
