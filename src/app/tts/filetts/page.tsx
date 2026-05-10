@@ -315,7 +315,7 @@ function applyBoldFocus(text: string): React.ReactNode {
 // Hoverable TTS wrapper (paragraphs, headings, code)
 // ---------------------------------------------------------------------------
 
-function TtsTextBlock({ block, boldFocus }: { block: TextContentBlock; boldFocus: boolean }) {
+function TtsTextBlock({ block, boldFocus, fontSize }: { block: TextContentBlock; boldFocus: boolean; fontSize: number }) {
     const [hovered, setHovered] = useState(false);
     const [speaking, setSpeaking] = useState(false);
     const ref = useRef<HTMLElement>(null);
@@ -380,8 +380,8 @@ function TtsTextBlock({ block, boldFocus }: { block: TextContentBlock; boldFocus
         return (
             <p
                 ref={ref as React.RefObject<HTMLParagraphElement>}
-                className={`text-sm leading-relaxed text-text-primary ${activeClass}`}
-                style={borderStyle}
+                className={`leading-relaxed text-text-primary ${activeClass}`}
+                style={{ ...borderStyle, fontSize: `${fontSize}rem` }}
             >
                 {boldFocus ? applyBoldFocus(block.text) : block.text}
             </p>
@@ -440,11 +440,13 @@ function PageCard({
     pageBlocks,
     sourceType,
     boldFocus,
+    fontSize,
 }: {
     pageNum: number;
     pageBlocks: ContentBlock[];
     sourceType: 'pdf' | 'text' | null;
     boldFocus: boolean;
+    fontSize: number;
 }) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [nearViewport, setNearViewport] = useState(false);
@@ -493,7 +495,7 @@ function PageCard({
                                 />
                             );
                         }
-                        return <TtsTextBlock key={block.id} block={block as TextContentBlock} boldFocus={effectiveBoldFocus} />;
+                        return <TtsTextBlock key={block.id} block={block as TextContentBlock} boldFocus={effectiveBoldFocus} fontSize={fontSize} />;
                     })}
                 </div>
             )}
@@ -529,6 +531,7 @@ export default function PdfTtsPage() {
     const [sourceType, setSourceType] = useState<'pdf' | 'text' | null>(null);
 
     const [boldFocus, setBoldFocus] = useState(false);
+    const [fontSize, setFontSize] = useState(1);
 
     // Paste panel state
     const [pasteOpen, setPasteOpen] = useState(false);
@@ -613,17 +616,39 @@ export default function PdfTtsPage() {
 
                 <TTSSettingsPanel />
 
-                {/* Bold Focus Reading toggle */}
-                <div className="mb-4 flex items-center gap-3 px-1">
-                    <button
-                        role="switch"
-                        aria-checked={boldFocus}
-                        onClick={() => setBoldFocus((v) => !v)}
-                        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none ${boldFocus ? 'bg-primary' : 'bg-primary/20'}`}
-                    >
-                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${boldFocus ? 'translate-x-5' : 'translate-x-1'}`} />
-                    </button>
-                    <span className="text-sm text-text-secondary">Bold Focus Reading</span>
+                {/* Reading controls — Bold Focus toggle + paragraph font size */}
+                <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 px-1">
+                    <div className="flex items-center gap-3">
+                        <button
+                            role="switch"
+                            aria-checked={boldFocus}
+                            onClick={() => setBoldFocus((v) => !v)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none ${boldFocus ? 'bg-primary' : 'bg-primary/20'}`}
+                        >
+                            <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${boldFocus ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                        <span className="text-sm text-text-secondary">Bold Focus Reading</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="font-size-input" className="text-sm text-text-secondary whitespace-nowrap">
+                            Font Size
+                        </label>
+                        <input
+                            id="font-size-input"
+                            type="number"
+                            min={1}
+                            max={10}
+                            step={0.1}
+                            value={fontSize}
+                            onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!isNaN(v)) setFontSize(Math.min(10, Math.max(1, v)));
+                            }}
+                            className="w-20 rounded border border-primary/20 bg-background text-text-primary text-sm px-2 py-0.5 focus:outline-none focus:border-primary"
+                        />
+                        <span className="text-xs text-text-secondary/60">rem</span>
+                    </div>
                 </div>
 
                 {/* Drop zone */}
@@ -705,6 +730,7 @@ export default function PdfTtsPage() {
                                 pageBlocks={pageBlocks}
                                 sourceType={sourceType}
                                 boldFocus={boldFocus}
+                                fontSize={fontSize}
                             />
                         ))}
                     </div>
